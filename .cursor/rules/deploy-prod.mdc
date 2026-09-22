@@ -1,0 +1,15 @@
+---
+description: Always deploy completed work to Vercel production
+alwaysApply: true
+---
+
+# Deploy to production after completed work
+
+When a task (or a batch of related tasks) is finished and the app has meaningful user-facing or API changes:
+
+1. Deploy to **Vercel production** with:
+   `npx vercel deploy --prod --yes --scope aryanmandapatis-projects`
+2. Confirm the deploy succeeded and report the live URL (typically `https://college-fit-wine.vercel.app`).
+3. Do this at the **end** of the completed work — not mid-task, and not for pure Q&A / read-only exploration.
+4. If deploy fails (auth/scope/build), fix or report the error; do not claim the site is live until prod succeeds.
+5. Git commit/push only when the user asks; production deploy does not require a git commit.
