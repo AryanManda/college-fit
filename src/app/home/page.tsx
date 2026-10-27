@@ -30,9 +30,8 @@ function ProfileBar({ label, value }: { label: string; value: number }) {
 }
 
 export default function DashboardPage() {
-  const { state, enterSample, access, hydrated } = useStore();
+  const { state, loadDemo, hydrated } = useStore();
   const name = studentName(state);
-  const sample = access?.mode === "sample";
   const completeness = profilePercent(state);
   const slices = completionSlices(state).filter((s) => s.key !== "personal");
   const actions = recommendedActions(state).slice(0, 4);
@@ -44,29 +43,16 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="mb-8">
         <div className="min-w-0">
           <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-(--muted)">
-            {sample ? "Sample" : "Dashboard"}
+            Dashboard
           </div>
           <h1 className="serif text-[2.35rem] leading-[1.05] text-(--ink) md:text-[3rem]">
-            {sample ? "Alex Rivera’s workspace" : `Welcome back, ${name}`}
+            {`Welcome back, ${name}`}
           </h1>
-          <p className="mt-2 text-[0.98rem] text-(--muted)">
-            {sample
-              ? "Look through a filled-in student: career, colleges, path, strength, and resume."
-              : "Let's build your strongest college application."}
-          </p>
+          <p className="mt-2 text-[0.98rem] text-(--muted)">Let&apos;s build your strongest college application.</p>
         </div>
-        {sample ? (
-          <Link href="/subscribe" className="btn btn-primary shrink-0 self-start">
-            Get full access
-          </Link>
-        ) : (
-          <button type="button" className="btn btn-ghost shrink-0 self-start" onClick={enterSample}>
-            View the sample
-          </button>
-        )}
       </div>
 
       {showStartCard ? (
@@ -80,7 +66,7 @@ export default function DashboardPage() {
             <Link href="/profile" className="btn btn-primary">
               Complete Profile
             </Link>
-            <button type="button" className="btn btn-ghost" onClick={enterSample}>
+            <button type="button" className="btn btn-ghost" onClick={loadDemo}>
               Explore with a demo profile
             </button>
           </div>
@@ -93,8 +79,8 @@ export default function DashboardPage() {
             <Ring value={completeness} size={112} />
             <div className="mt-2 text-sm text-(--muted)">Profile completion</div>
             <div className="mt-1 text-sm font-semibold text-(--ink)">Profile {completeness}% Complete</div>
-            <Link href={sample ? "/subscribe" : "/profile"} className="btn btn-primary mt-4 w-full max-w-[220px]">
-              {sample ? "Get full access" : "Complete Profile"}
+            <Link href="/profile" className="btn btn-primary mt-4 w-full max-w-[220px]">
+              Complete Profile
             </Link>
           </div>
           <div className="mt-6 space-y-3.5 border-t border-(--line) pt-5">

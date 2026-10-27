@@ -16,13 +16,11 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import { isFullOnlyPath, readAccess } from "../lib/access";
 import { APP_NAME, APP_TAGLINE } from "../lib/constants";
 import { logoutAccount } from "../lib/auth-local";
 import { studentName } from "../lib/defaults";
 import { useStore } from "../lib/store";
 import { PageBackButton } from "./PageBackButton";
-import { SampleLock } from "./SampleLock";
 
 const ITEMS = [
   { href: "/home", label: "Home", icon: Home },
@@ -82,19 +80,11 @@ function phoneTabActive(pathname: string, href: string) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { state, reset, access, hydrated, canRestoreFull, enterFull } = useStore();
+  const { state, reset, hydrated } = useStore();
   const name = studentName(state);
   const signedIn = Boolean(state.accountEmail);
   const hasProfile = name !== "Student";
-  const resolvedAccess = access ?? (hydrated ? readAccess() : null);
-  const sample = resolvedAccess?.mode === "sample";
-  const publicPage = pathname === "/" || pathname === "/subscribe";
   const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    if (!hydrated || publicPage || resolvedAccess) return;
-    router.replace("/");
-  }, [hydrated, publicPage, resolvedAccess, router]);
 
   const menuActive =
     pathname === "/strength" ||
@@ -125,13 +115,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.push("/account");
   };
 
-  if (publicPage) return <>{children}</>;
-
-  if (!hydrated || !resolvedAccess) {
+  if (!hydrated) {
     return <div className="page-pad py-10 text-(--muted)">Loading your workspace…</div>;
   }
-
-  const locked = sample && isFullOnlyPath(pathname);
 
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[240px_1fr]">
@@ -164,27 +150,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="rounded-2xl border border-(--line) bg-(--surface) px-3 py-3 text-sm">
           <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-(--muted)">
-            {sample ? "Sample" : signedIn ? "Signed in" : "Your profile"}
+            {signedIn ? "Signed in" : "Your profile"}
           </div>
           <div className="mt-1 truncate font-semibold text-(--ink)">
-            {sample ? "Alex Rivera" : signedIn ? state.accountEmail : hasProfile ? name : "Not set up yet"}
+            {signedIn ? state.accountEmail : hasProfile ? name : "Not set up yet"}
           </div>
-          {sample ? (
-            <div className="mt-2 flex flex-col gap-1">
-              <Link href="/subscribe" className="inline-flex min-h-11 items-center text-sm font-semibold text-(--accent)">
-                Get full access
-              </Link>
-              {canRestoreFull ? (
-                <button
-                  type="button"
-                  onClick={() => enterFull()}
-                  className="inline-flex min-h-11 items-center text-left text-sm font-semibold text-(--muted) hover:text-(--ink)"
-                >
-                  Return to my profile
-                </button>
-              ) : null}
-            </div>
-          ) : !hasProfile && !signedIn ? (
+          {!hasProfile && !signedIn ? (
             <div className="mt-2 flex flex-col gap-1">
               <Link href="/onboarding" className="inline-flex min-h-11 items-center text-sm font-semibold text-(--accent)">
                 Create your profile
@@ -233,16 +204,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {APP_NAME}
             </Link>
             <div className="flex shrink-0 items-center gap-2">
-              {sample ? (
-                <Link href="/subscribe" className="btn btn-primary px-3">
-                  Full access
-                </Link>
-              ) : (
-                <Link href="/upload" className="btn btn-primary px-3">
-                  <Upload size={16} />
-                  Upload
-                </Link>
-              )}
+              <Link href="/upload" className="btn btn-primary px-3">
+                <Upload size={16} />
+                Upload
+              </Link>
               <button
                 type="button"
                 className={`btn px-3 ${menuActive || menuOpen ? "btn-primary" : "btn-ghost"}`}
@@ -258,22 +223,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
         <main className="page-enter page-pad mx-auto w-full max-w-6xl py-6 md:py-8">
           {pathname !== "/home" ? <PageBackButton /> : null}
-          {sample ? (
-            <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-(--line) bg-(--accent-soft) px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-(--ink)">You’re viewing the sample student, Alex Rivera.</p>
-              <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-                {canRestoreFull ? (
-                  <button type="button" className="btn btn-ghost" onClick={() => enterFull()}>
-                    Return to my profile
-                  </button>
-                ) : null}
-                <Link href="/subscribe" className="btn btn-primary">
-                  Get full access
-                </Link>
-              </div>
-            </div>
-          ) : null}
-          {locked ? <SampleLock /> : children}
+          {children}
         </main>
       </div>
 
@@ -319,48 +269,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-(--line)" />
             <div className="truncate text-sm font-semibold text-(--ink)">
-              {sample ? "Sample · Alex Rivera" : signedIn ? state.accountEmail : hasProfile ? name : "Not signed in"}
+              {signedIn ? state.accountEmail : hasProfile ? name : "Not signed in"}
             </div>
             <div className="mt-3 grid gap-2">
-              {sample ? (
-                <Link href="/subscribe" className="btn btn-primary w-full">
-                  Get full access
-                </Link>
-              ) : (
-                <Link href="/upload" className="btn btn-primary w-full">
-                  <Upload size={16} /> Upload transcript & resume
-                </Link>
-              )}
+              <Link href="/upload" className="btn btn-primary w-full">
+                <Upload size={16} /> Upload transcript & resume
+              </Link>
               <Link href="/resume" className="btn btn-ghost w-full justify-start">
                 <FileText size={16} /> Resume
               </Link>
               <Link href="/strength" className="btn btn-ghost w-full justify-start">
                 <Gauge size={16} /> Strength
               </Link>
-              {sample ? (
-                canRestoreFull ? (
-                  <button type="button" className="btn btn-ghost w-full" onClick={() => enterFull()}>
-                    Return to my profile
-                  </button>
-                ) : null
+              <Link href="/settings" className="btn btn-ghost w-full justify-start">
+                <Settings size={16} /> Settings
+              </Link>
+              <Link href="/account" className="btn btn-ghost w-full justify-start">
+                <UserRound size={16} /> Account
+              </Link>
+              {!hasProfile && !signedIn ? (
+                <Link href="/onboarding" className="btn btn-primary w-full">
+                  Create your profile
+                </Link>
               ) : (
-                <>
-                  <Link href="/settings" className="btn btn-ghost w-full justify-start">
-                    <Settings size={16} /> Settings
-                  </Link>
-                  <Link href="/account" className="btn btn-ghost w-full justify-start">
-                    <UserRound size={16} /> Account
-                  </Link>
-                  {!hasProfile && !signedIn ? (
-                    <Link href="/onboarding" className="btn btn-primary w-full">
-                      Create your profile
-                    </Link>
-                  ) : (
-                    <button type="button" className="btn btn-ghost w-full text-(--danger)" onClick={onLogout}>
-                      Log out
-                    </button>
-                  )}
-                </>
+                <button type="button" className="btn btn-ghost w-full text-(--danger)" onClick={onLogout}>
+                  Log out
+                </button>
               )}
             </div>
           </div>
