@@ -1,6 +1,7 @@
 import type { AppState, MatchBreakdown } from "./types";
 import { getCollege } from "../data/colleges";
 import { getCareer } from "../data/careers";
+import { collegeWithinRange, isLocationRangeActive } from "./geo";
 import { matchAll } from "./matching";
 import { topCareers } from "./career-matching";
 
@@ -14,7 +15,13 @@ export function careerToMajors(state: AppState) {
 
 export function collegesForCareer(state: AppState, limit = 6) {
   const majors = careerToMajors(state);
-  const all = matchAll(state).filter((m) => !m.outOfRange);
+  const rangeOn = isLocationRangeActive(state);
+  const all = matchAll(state).filter((m) => {
+    if (m.outOfRange) return false;
+    if (!rangeOn) return true;
+    const c = getCollege(m.collegeId);
+    return c ? collegeWithinRange(state, c) : false;
+  });
   const filtered = majors.length
     ? all.filter((m) => {
         const c = getCollege(m.collegeId);
@@ -26,7 +33,6 @@ export function collegesForCareer(state: AppState, limit = 6) {
         );
       })
     : all;
-  // Prefer schools at the student's academic level that also offer the major
   const pool = filtered.length ? filtered : all;
   return pool
     .filter((m) => m.category === "Likely" || m.category === "Target" || m.category === "Reach")
@@ -40,9 +46,14 @@ export type RealisticBucket = {
 };
 
 export function realisticBuckets(state: AppState): RealisticBucket[] {
-  const all = matchAll(state).filter(
-    (m) => !m.outOfRange && (m.category === "Likely" || m.category === "Target" || m.admissions >= 50),
-  );
+  const rangeOn = isLocationRangeActive(state);
+  const all = matchAll(state).filter((m) => {
+    if (m.outOfRange) return false;
+    if (!(m.category === "Likely" || m.category === "Target" || m.admissions >= 50)) return false;
+    if (!rangeOn) return true;
+    const c = getCollege(m.collegeId);
+    return c ? collegeWithinRange(state, c) : false;
+  });
   if (!all.length) return [];
 
   const pick = (sort: (a: MatchBreakdown, b: MatchBreakdown) => number) => [...all].sort(sort)[0] ?? null;
@@ -52,7 +63,7 @@ export function realisticBuckets(state: AppState): RealisticBucket[] {
     { key: "bestAcademic", title: "Best Academic Match", match: pick((a, b) => b.admissions - a.admissions || b.academic - a.academic) },
     { key: "bestValue", title: "Best Value", match: pick((a, b) => b.financial - a.financial || b.admissions - a.admissions) },
     { key: "bestCareer", title: "Best Career Match", match: pick((a, b) => b.career - a.career || b.admissions - a.admissions) },
-    { key: "bestLocation", title: "Best Location", match: pick((a, b) => b.location - a.location || b.admissions - a.admissions) },
+    { key: "bestLocation", title: "Best Location", match: pick((a, b) => (a.miles ?? 9999) - (b.miles ?? 9999) || b.location - a.location) },
   ];
 }
 

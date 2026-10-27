@@ -207,8 +207,14 @@ export const COLLEGES: College[] = (() => {
   return [...byId.values()];
 })();
 
+const remoteCache = new Map<string, College>();
+
+export function rememberCollege(college: College) {
+  remoteCache.set(college.id, college);
+}
+
 export function getCollege(id: string) {
-  return COLLEGES.find((c) => c.id === id);
+  return COLLEGES.find((c) => c.id === id) ?? remoteCache.get(id);
 }
 
 export function logoUrl(college: College) {

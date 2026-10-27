@@ -1,22 +1,42 @@
-import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Instrument_Serif, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
 import { Providers } from "../components/Providers";
 import { AppShell } from "../components/AppShell";
 
-const serif = Fraunces({
+const serif = Instrument_Serif({
   subsets: ["latin"],
-  variable: "--font-fraunces",
+  weight: "400",
+  variable: "--font-instrument",
 });
 
-const sans = Plus_Jakarta_Sans({
+const sans = Source_Sans_3({
   subsets: ["latin"],
-  variable: "--font-jakarta",
+  variable: "--font-source",
 });
 
-export const metadata = {
-  title: "CollegeMatch AI — Career & College Pathway",
+export const metadata: Metadata = {
+  title: "Aether — College Fit & Applications",
   description:
     "Build your path: discover careers that fit you, find schools you can realistically get into, and see what to do next. Estimates, not guarantees.",
+  applicationName: "Aether",
+  appleWebApp: {
+    capable: true,
+    title: "Aether",
+    statusBarStyle: "default",
+  },
+  formatDetection: {
+    telephone: false,
+    email: false,
+    address: false,
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#f4f1ea",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

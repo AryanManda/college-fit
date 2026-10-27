@@ -45,7 +45,13 @@ export default function NearbyPage() {
         }
         return true;
       })
-      .sort((a, b) => (a.match.miles ?? 9999) - (b.match.miles ?? 9999));
+      .sort((a, b) => {
+        const ma = a.match.miles ?? 9999;
+        const mb = b.match.miles ?? 9999;
+        // Distance list: nearer first; when miles are similar, better fit wins.
+        if (Math.abs(ma - mb) > 5) return ma - mb;
+        return b.match.overall - a.match.overall || ma - mb;
+      });
   }, [state, miles, minutes, kind, type, size, cat, maxCost, inStateOnly, customMin, religious]);
 
   const pts = rows

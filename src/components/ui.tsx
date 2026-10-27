@@ -1,15 +1,13 @@
-import { scoreBg, scoreTone } from "../lib/format";
-
 export function ScoreBar({ label, value }: { label: string; value: number }) {
   return (
     <div>
       <div className="mb-1.5 flex items-center justify-between text-xs">
         <span className="font-medium text-(--muted)">{label}</span>
-        <span className={`font-semibold tabular-nums ${scoreTone(value)}`}>{value}/100</span>
+        <span className="font-semibold tabular-nums text-(--ink)">{value}/100</span>
       </div>
-      <div className="h-1 overflow-hidden rounded-[2px] bg-(--bg-warm)">
+      <div className="h-1.5 overflow-hidden rounded-full bg-(--bg-warm)">
         <div
-          className={`score-fill h-full rounded-[2px] ${scoreBg(value)}`}
+          className="score-fill h-full rounded-full bg-(--accent-2)"
           style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
         />
       </div>
@@ -22,7 +20,7 @@ export function Ring({ value, size = 88 }: { value: number; size?: number }) {
   const c = 2 * Math.PI * r;
   const offset = c - (value / 100) * c;
   return (
-    <svg width={size} height={size} viewBox="0 0 88 88">
+    <svg width={size} height={size} viewBox="0 0 88 88" aria-hidden>
       <circle cx="44" cy="44" r={r} fill="none" stroke="var(--bg-warm)" strokeWidth="7" />
       <circle
         cx="44"
@@ -36,7 +34,15 @@ export function Ring({ value, size = 88 }: { value: number; size?: number }) {
         strokeLinecap="round"
         transform="rotate(-90 44 44)"
       />
-      <text x="44" y="49" textAnchor="middle" fontSize="15" fontWeight="700" fill="var(--ink)">
+      <text
+        x="44"
+        y="50"
+        textAnchor="middle"
+        fontSize="18"
+        fontWeight="700"
+        fill="var(--ink)"
+        fontFamily="var(--font-sans)"
+      >
         {value}%
       </text>
     </svg>
@@ -62,7 +68,7 @@ export function PageHeader({
             {eyebrow}
           </div>
         ) : null}
-        <h1 className="serif text-[2.35rem] leading-[1.05] text-(--ink) md:text-[3.1rem]">{title}</h1>
+        <h1 className="serif text-[2rem] leading-[1.05] text-(--ink) sm:text-[2.35rem] md:text-[3.1rem]">{title}</h1>
         {subtitle ? <p className="mt-3 max-w-2xl text-[0.98rem] leading-relaxed text-(--muted)">{subtitle}</p> : null}
       </div>
       {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}

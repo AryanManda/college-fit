@@ -214,7 +214,15 @@ export default function PathPage() {
       </section>
 
       <section className="card p-5">
-        <h2 className="serif text-3xl">Progress & next actions</h2>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="serif text-3xl">Progress & next actions</h2>
+            <p className="mt-1 text-sm text-(--muted)">Profile completeness {completeness}%</p>
+          </div>
+          <Link href="/strength" className="btn btn-primary">
+            Overall strength
+          </Link>
+        </div>
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-(--muted)">
           {actions.slice(0, 6).map((a) => (
             <li key={a.title}><Link href={a.href} className="font-semibold text-(--ink)">{a.title}</Link> — {a.detail}</li>

@@ -1,31 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #e9eef4;
-  --bg-warm: #dde5ef;
-  --surface: #fafbfd;
-  --ink: #101826;
-  --muted: #5a6578;
-  --line: #cfd8e6;
-  --accent: #184a6b;
-  --accent-soft: #dceaf4;
-  --accent-2: #8a4b16;
-  --danger: #9e3a32;
-  --score-high: #1a6b52;
-  --score-mid: #8a5a12;
-  --score-low: #9e3a32;
-  --shadow: none;
-  --font-sans: var(--font-jakarta), "Segoe UI", sans-serif;
-  --font-serif: var(--font-fraunces), Georgia, serif;
-  --radius: 10px;
-  --radius-sm: 6px;
+  --bg: #f4f1ea;
+  --bg-warm: #efe8dc;
+  --surface: #fffdf8;
+  --ink: #1c1915;
+  --muted: #6d675c;
+  --line: #e4ddd0;
+  --accent: #0f6b57;
+  --accent-soft: #e4f3ee;
+  --accent-2: #c56a2e;
+  --danger: #b44538;
+  --score-high: #0f6b57;
+  --score-mid: #c56a2e;
+  --score-low: #b44538;
+  --banner: #f6ebe8;
+  --shadow: 0 1px 2px rgba(28, 25, 21, 0.04), 0 12px 32px rgba(28, 25, 21, 0.05);
+  --font-sans: var(--font-source), "Segoe UI", sans-serif;
+  --font-serif: var(--font-instrument), Georgia, serif;
+  --radius: 14px;
+  --radius-sm: 10px;
 }
 
 @theme inline {
   --color-background: var(--bg);
   --color-foreground: var(--ink);
-  --font-sans: var(--font-jakarta), "Segoe UI", sans-serif;
-  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-source), "Segoe UI", sans-serif;
+  --font-serif: var(--font-instrument), Georgia, serif;
 }
 
 * {
@@ -37,25 +38,24 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-sans);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   background-color: var(--bg);
-  background-image:
-    radial-gradient(ellipse 90% 60% at 0% -10%, rgba(24, 74, 107, 0.09), transparent 55%),
-    radial-gradient(ellipse 70% 50% at 100% 0%, rgba(26, 107, 82, 0.06), transparent 50%),
-    linear-gradient(180deg, #eef2f7 0%, var(--bg) 38%, #e4ebf3 100%);
+  background-image: linear-gradient(180deg, #f8f5ef 0%, var(--bg) 50%, #efe9df 100%);
   background-attachment: fixed;
   min-height: 100%;
+  overflow-x: clip;
 }
 
 h1,
 h2,
 .serif {
   font-family: var(--font-serif);
-  font-weight: 500;
-  letter-spacing: -0.03em;
-  font-optical-sizing: auto;
+  font-weight: 400;
+  letter-spacing: -0.02em;
 }
 
 a {
@@ -69,17 +69,76 @@ textarea {
   font-family: inherit;
 }
 
+a,
+button,
+label,
+summary {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+select,
+textarea,
+button {
+  scroll-margin-top: 5rem;
+  scroll-margin-bottom: 6.5rem;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+select,
+textarea {
+  max-width: 100%;
+}
+
+/* iPhone and iPad zoom the page when a focused field is under 16px, which shoves buttons off-screen. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 1.35rem;
+    height: 1.35rem;
+  }
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* Real hit target for file pickers. display:none inputs do not open on iOS. */
+.file-pick-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 100px !important;
+}
+
 .card {
-  background: color-mix(in srgb, var(--surface) 92%, white);
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: none;
+  box-shadow: var(--shadow);
   transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
 }
 
 a.card:hover,
 .card-interactive:hover {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
   background: #fff;
   transform: translateY(-1px);
 }
@@ -91,13 +150,20 @@ a.card:hover,
 
 .field {
   width: 100%;
+  min-height: 44px;
   border: 1px solid var(--line);
   background: #fff;
   border-radius: var(--radius-sm);
   padding: 0.7rem 0.85rem;
   color: var(--ink);
+  font-size: 16px;
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+textarea.field {
+  min-height: 6.5rem;
+  resize: vertical;
 }
 
 .field:focus {
@@ -107,12 +173,10 @@ a.card:hover,
 
 .label {
   display: block;
-  font-size: 0.72rem;
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.78rem;
+  font-weight: 600;
   color: var(--muted);
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.35rem;
 }
 
 .btn {
@@ -120,14 +184,18 @@ a.card:hover,
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  border-radius: var(--radius-sm);
-  padding: 0.62rem 1.05rem;
-  font-weight: 650;
+  border-radius: 999px;
+  padding: 0.62rem 1.15rem;
+  min-height: 44px;
+  max-width: 100%;
+  font-weight: 600;
   font-size: 0.9rem;
-  letter-spacing: -0.01em;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, filter 0.15s ease, transform 0.15s ease;
 }
 
 .btn:active {
@@ -136,22 +204,21 @@ a.card:hover,
 
 .btn-primary {
   background: var(--accent);
-  color: #f5f8fb;
+  color: #fff;
 }
 
 .btn-primary:hover {
-  background: #123a55;
+  filter: brightness(1.07);
 }
 
 .btn-ghost {
-  background: transparent;
+  background: #fff;
   border-color: var(--line);
   color: var(--ink);
 }
 
 .btn-ghost:hover {
-  background: #fff;
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: var(--bg-warm);
 }
 
 .btn:disabled {
@@ -164,24 +231,42 @@ a.card:hover,
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  border-radius: var(--radius-sm);
-  padding: 0.22rem 0.55rem;
-  font-size: 0.72rem;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.75rem;
   font-weight: 650;
-  letter-spacing: 0.01em;
   background: var(--accent-soft);
   color: var(--accent);
-  border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 .page-enter {
   animation: rise-in 0.45s ease both;
 }
 
+.page-pad {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+@media (min-width: 768px) {
+  .page-pad {
+    padding-left: max(1.5rem, env(safe-area-inset-left));
+    padding-right: max(1.5rem, env(safe-area-inset-right));
+  }
+}
+
+@media (min-width: 1024px) {
+  .page-pad {
+    padding-left: max(2rem, env(safe-area-inset-left));
+    padding-right: max(2rem, env(safe-area-inset-right));
+  }
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -203,31 +288,26 @@ a.card:hover,
   animation: bar-fill 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.nav-link {
-  position: relative;
-}
-
-.nav-link[data-active="true"]::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 20%;
-  bottom: 20%;
-  width: 2px;
-  background: var(--accent);
-  border-radius: 2px;
-}
-
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #b8c3d4;
-  border-radius: 8px;
+  background: #d5cec2;
+  border-radius: 99px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+@media (hover: none) {
+  a.card:hover,
+  .card-interactive:hover,
+  .btn-primary:hover,
+  .btn-ghost:hover {
+    transform: none;
+    filter: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

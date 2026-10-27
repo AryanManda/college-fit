@@ -76,6 +76,77 @@ export function profilePercent(state: AppState) {
   return Math.round((personal * 0.15 + core * 0.85) * 100);
 }
 
+/** How many personalized college recommendations to unlock based on profile depth. */
+export type CollegeFeedUnlock = {
+  level: "locked" | "starter" | "guided" | "full";
+  percent: number;
+  /** Max schools to show (0 = none). */
+  limit: number;
+  title: string;
+  message: string;
+  ctaHref: string;
+  ctaLabel: string;
+};
+
+export function collegeFeedUnlock(state: AppState): CollegeFeedUnlock {
+  const percent = profilePercent(state);
+  const missing = missingCriticalFields(state);
+  const hasBasics =
+    Boolean(state.student.state || state.student.city) &&
+    Boolean(state.academic.unweightedGpa || state.academic.weightedGpa);
+
+  if (percent < 22 || !hasBasics) {
+    return {
+      level: "locked",
+      percent,
+      limit: 0,
+      title: "Complete your profile to see colleges",
+      message:
+        missing.length > 0
+          ? `Add ${missing.slice(0, 3).join(", ")}${missing.length > 3 ? `, and ${missing.length - 3} more` : ""} so we can recommend schools that fit you — not a random list.`
+          : "Tell us where you live and your GPA first. Then we’ll show colleges that match your preferences.",
+      ctaHref: "/profile",
+      ctaLabel: "Complete profile",
+    };
+  }
+
+  if (percent < 45) {
+    return {
+      level: "starter",
+      percent,
+      limit: 8,
+      title: "Starter matches from your preferences",
+      message:
+        "Your profile is still light, so these are generally strong fits based on location and what you’ve shared so far. Add testing, activities, and majors for sharper odds.",
+      ctaHref: "/profile",
+      ctaLabel: "Improve recommendations",
+    };
+  }
+
+  if (percent < 70) {
+    return {
+      level: "guided",
+      percent,
+      limit: 24,
+      title: "Colleges matched to your preferences",
+      message:
+        "Showing schools aligned with your location, academics, and goals. Finish budget, career, and activities for a fuller feed.",
+      ctaHref: "/profile",
+      ctaLabel: "Complete remaining sections",
+    };
+  }
+
+  return {
+    level: "full",
+    percent,
+    limit: Number.POSITIVE_INFINITY,
+    title: "Personalized college feed",
+    message: "Your profile is detailed enough for full matching within your preferences and range.",
+    ctaHref: "/profile",
+    ctaLabel: "Edit profile",
+  };
+}
+
 export function missingCriticalFields(state: AppState): string[] {
   const missing: string[] = [];
   if (!state.student.state) missing.push("home state");

@@ -419,11 +419,21 @@ export function parseNum(value: string | number | undefined | null): number | nu
   return Number.isFinite(n) ? n : null;
 }
 
-/** Normalize student GPA to a ~4.0 scale for comparisons with published averages. */
+/**
+ * Normalize student GPA to a ~4.0 scale for comparisons with published averages.
+ * Unweighted GPA is already on a 4.0 scale — never rescale it by the weighted GPA scale.
+ * Weighted GPA is converted only when unweighted is missing: weighted * (4 / scale).
+ */
 export function gpaOnFour(state: AppState): number | null {
-  const raw = parseNum(state.academic.unweightedGpa) ?? parseNum(state.academic.weightedGpa);
-  if (raw === null) return null;
-  if (state.academic.gpaScale === "100") return Math.min(4.3, (raw / 100) * 4);
-  if (state.academic.gpaScale === "5.0") return Math.min(4.3, (raw / 5) * 4);
-  return raw;
+  const unweighted = parseNum(state.academic.unweightedGpa);
+  if (unweighted !== null) return unweighted;
+
+  const weighted = parseNum(state.academic.weightedGpa);
+  if (weighted === null) return null;
+
+  const scale = state.academic.gpaScale;
+  if (scale === "100") return Math.min(4.3, (weighted / 100) * 4);
+  if (scale === "5.0") return Math.min(4.3, weighted * (4 / 5));
+  // "4.0" / "Other": treat as already comparable to a 4.0 figure.
+  return weighted;
 }

@@ -1,6 +1,13 @@
 import type { AppState, College } from "./types";
 import { COLLEGES } from "../data/colleges";
 import { getCollege } from "../data/colleges";
+import { collegeFeedUnlock } from "./completion";
+import {
+  collegeWithinRange,
+  describeLocationRange,
+  distanceMiles,
+  isLocationRangeActive,
+} from "./geo";
 import { matchCollege, recommendationScore, studentAcademicStrength } from "./matching";
 
 /** Show unique schools only (by id, then by normalized name). */
@@ -49,21 +56,75 @@ export function likedTraitBoost(state: AppState, college: College): number {
   return Math.min(28, score);
 }
 
-export function collegesFeed(state: AppState): College[] {
+export function feedRangeMeta(state: AppState) {
+  return {
+    active: isLocationRangeActive(state),
+    label: describeLocationRange(state),
+    needsLocation: isLocationRangeActive(state) && !state.student.state && !state.student.city,
+  };
+}
+
+function preferenceAligned(state: AppState, college: College): boolean {
+  const geo = state.preferences.geographic;
+  const home = state.student.state;
+  if (geo.unwillingStates.includes(college.state)) return false;
+  if (geo.preferredStates.length && !geo.preferredStates.includes(college.state) && college.state !== home) {
+    return false;
+  }
+  if (home && geo.attendanceScope === "only-state" && college.state !== home) return false;
+  const settings = geo.settings;
+  if (settings?.length && !settings.includes(college.campusSetting)) return false;
+  return true;
+}
+
+export function collegesFeed(state: AppState, extra: College[] = []): College[] {
+  const unlock = collegeFeedUnlock(state);
+  if (unlock.limit === 0) return [];
+
   const banished = new Set(state.banishedCollegeIds ?? []);
   const strength = studentAcademicStrength(state);
-  return uniqueColleges()
+  const rangeOn = isLocationRangeActive(state);
+  const starter = unlock.level === "starter";
+
+  let pool = uniqueColleges([...COLLEGES, ...extra])
     .filter((c) => !banished.has(c.id))
+    .filter((c) => !rangeOn || collegeWithinRange(state, c));
+
+  if (starter) {
+    pool = pool.filter((c) => preferenceAligned(state, c) || (state.student.state && c.state === state.student.state));
+  }
+
+  const ranked = pool
     .map((c) => {
       const match = matchCollege(state, c);
       const base = recommendationScore(state, match, c, strength);
       const boost = likedTraitBoost(state, c);
-      // Liked schools still appear but sink slightly so new similar picks surface
       const savedPenalty = state.savedCollegeIds.includes(c.id) ? 8 : 0;
-      return { c, score: base + boost - savedPenalty };
+      const miles = match.miles ?? distanceMiles(state, c) ?? 99999;
+      const bandBoost =
+        starter && (match.category === "Likely" || match.category === "Target")
+          ? 12
+          : starter && match.outOfRange
+            ? -40
+            : 0;
+      const homeBoost = state.student.state && c.state === state.student.state ? (starter ? 18 : 6) : 0;
+      return {
+        c,
+        match,
+        // Fit/recommendation first; miles are a secondary sort only (not mixed into score).
+        score: base + boost - savedPenalty + bandBoost + homeBoost,
+        miles,
+      };
     })
-    .sort((a, b) => b.score - a.score)
+    .filter((x) => !(starter && x.match.outOfRange))
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.miles - b.miles;
+    })
     .map((x) => x.c);
+
+  if (!Number.isFinite(unlock.limit)) return ranked;
+  return ranked.slice(0, unlock.limit);
 }
 
 export function saveAndLikeCollege(state: AppState, id: string): AppState {

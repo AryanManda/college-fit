@@ -33,6 +33,12 @@ export function FeedSchoolCard({
             {college.name}
           </Link>
           <p className="mt-1 text-sm text-(--muted)">{schoolDescription(college)}</p>
+          {match?.miles != null ? (
+            <p className="mt-1 text-xs font-semibold text-(--accent)">
+              ~{match.miles} miles away
+              {match.driveMinutes != null ? ` · ~${match.driveMinutes} min drive` : ""}
+            </p>
+          ) : null}
         </div>
         {match ? (
           <div className="text-right">

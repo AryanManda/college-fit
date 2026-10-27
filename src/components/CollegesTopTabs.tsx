@@ -17,6 +17,7 @@ const TABS = [
     label: "How to Get Admitted",
     match: (p: string) => p.startsWith("/colleges/get-admitted") || p === "/admitted",
   },
+  { href: "/resume", label: "Resume Builder", match: (p: string) => p === "/resume" },
   { href: "/find", label: "Balanced List", match: (p: string) => p === "/find" || p === "/match" },
   { href: "/nearby", label: "Near Me", match: (p: string) => p === "/nearby" },
   { href: "/odds", label: "Odds", match: (p: string) => p === "/odds" },
@@ -26,17 +27,17 @@ const TABS = [
 export function CollegesTopTabs() {
   const pathname = usePathname();
   return (
-    <nav className="mb-6 -mx-1 flex gap-1 overflow-x-auto pb-1">
+    <nav className="mb-6 -mx-1 flex gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
       {TABS.map((tab) => {
         const active = tab.match(pathname);
         return (
           <Link
             key={tab.href}
             href={tab.href}
-            className={`shrink-0 rounded-full px-3.5 py-2 text-[13px] font-semibold transition ${
+            className={`inline-flex min-h-11 shrink-0 items-center rounded-full px-3.5 py-2 text-[13px] font-semibold transition ${
               active
                 ? "bg-(--accent) text-white"
-                : "bg-white/70 text-(--muted) hover:bg-(--accent-soft) hover:text-(--accent)"
+                : "border border-(--line) bg-(--surface) text-(--ink)/80 hover:bg-(--accent-soft) hover:text-(--accent)"
             }`}
           >
             {tab.label}

@@ -27,6 +27,7 @@ import { PageHeader } from "../../components/ui";
 import { DemographicsForm, LocationAndDistance } from "../../components/ProfileExtras";
 import { syncResidencePatch } from "../../lib/location-prefs";
 import { ProfilePromptBanner } from "../../components/ProfilePromptBanner";
+import { ProfileAutoPopulate, TipCard } from "../../components/ProfileAutoPopulate";
 import { HighSchoolPicker } from "../../components/HighSchoolPicker";
 import { CourseNamePicker } from "../../components/CourseNamePicker";
 import { inferSubjectFromCourseName } from "../../data/ap-ib-courses";
@@ -76,15 +77,16 @@ export default function ProfilePage() {
     <div>
       <PageHeader
         title="My Profile"
-        subtitle="Enter information once. Matching, resume, and application strength all read from this profile."
+        subtitle="Enter information once. Matching, resume, and overall strength all read from this profile."
       />
       <ProfilePromptBanner dense />
-      <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
+      <ProfileAutoPopulate />
+      <div className="mb-5 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
         {TABS.map(([id, label]) => (
           <button
             key={id}
             type="button"
-            className={`rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap ${
+            className={`min-h-11 shrink-0 rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap ${
               tab === id ? "bg-(--accent) text-white" : "bg-(--surface) text-(--muted) border border-(--line)"
             }`}
             onClick={() => setTab(id)}
@@ -144,45 +146,47 @@ function Personal({ state, patch }: { state: AppState; patch: (fn: (s: AppState)
     patch((prev) => ({ ...prev, student: { ...prev.student, [k]: v }, onboardingComplete: true }));
   };
   return (
-    <div className="card grid gap-4 p-5 md:grid-cols-2">
-      <Field label="First name"><input className="field" value={s.firstName} onChange={(e) => set("firstName", e.target.value)} /></Field>
-      <Field label="Last name"><input className="field" value={s.lastName} onChange={(e) => set("lastName", e.target.value)} /></Field>
-      <Field label="Email"><input className="field" type="email" value={s.email} onChange={(e) => set("email", e.target.value)} /></Field>
-      <Field label="Age"><input className="field" value={s.age} onChange={(e) => set("age", e.target.value)} /></Field>
-      <Field label="State">
-        <select className="field" value={s.state} onChange={(e) => set("state", e.target.value)}>
-          <option value="">Select</option>
-          {US_STATES.map((st) => <option key={st}>{st}</option>)}
-        </select>
-      </Field>
-      <Field label="High school">
-        <HighSchoolPicker
-          stateCode={s.state}
-          value={s.highSchool}
-          onChange={(name) => set("highSchool", name)}
-          onSelectSchool={(school) => {
-            patch((prev) => ({
-              ...syncResidencePatch(prev, {
-                highSchool: school.name,
-                city: school.city || prev.student.city,
-                state: school.state || prev.student.state,
-                zip: school.zip || prev.student.zip,
-                latitude: school.latitude,
-                longitude: school.longitude,
-                country: "United States",
-              }),
-              onboardingComplete: true,
-            }));
-          }}
-        />
-      </Field>
-      <Field label="Graduation year"><input className="field" value={s.graduationYear} onChange={(e) => set("graduationYear", e.target.value)} /></Field>
-      <Field label="City"><input className="field" value={s.city} onChange={(e) => set("city", e.target.value)} /></Field>
-      <Field label="Country"><input className="field" value={s.country} onChange={(e) => set("country", e.target.value)} /></Field>
-      {!s.state ? (
-        <p className="text-sm text-(--accent-2) md:col-span-2">Set your home state so we can load that state&apos;s high schools and prioritize in-state colleges.</p>
-      ) : null}
-    </div>
+    <TipCard>
+      <div className="card grid gap-4 p-5 md:grid-cols-2">
+        <Field label="First name"><input className="field" value={s.firstName} onChange={(e) => set("firstName", e.target.value)} /></Field>
+        <Field label="Last name"><input className="field" value={s.lastName} onChange={(e) => set("lastName", e.target.value)} /></Field>
+        <Field label="Email"><input className="field" type="email" value={s.email} onChange={(e) => set("email", e.target.value)} /></Field>
+        <Field label="Age"><input className="field" value={s.age} onChange={(e) => set("age", e.target.value)} /></Field>
+        <Field label="State">
+          <select className="field" value={s.state} onChange={(e) => set("state", e.target.value)}>
+            <option value="">Select</option>
+            {US_STATES.map((st) => <option key={st}>{st}</option>)}
+          </select>
+        </Field>
+        <Field label="High school">
+          <HighSchoolPicker
+            stateCode={s.state}
+            value={s.highSchool}
+            onChange={(name) => set("highSchool", name)}
+            onSelectSchool={(school) => {
+              patch((prev) => ({
+                ...syncResidencePatch(prev, {
+                  highSchool: school.name,
+                  city: school.city || prev.student.city,
+                  state: school.state || prev.student.state,
+                  zip: school.zip || prev.student.zip,
+                  latitude: school.latitude,
+                  longitude: school.longitude,
+                  country: "United States",
+                }),
+                onboardingComplete: true,
+              }));
+            }}
+          />
+        </Field>
+        <Field label="Graduation year"><input className="field" value={s.graduationYear} onChange={(e) => set("graduationYear", e.target.value)} /></Field>
+        <Field label="City"><input className="field" value={s.city} onChange={(e) => set("city", e.target.value)} /></Field>
+        <Field label="Country"><input className="field" value={s.country} onChange={(e) => set("country", e.target.value)} /></Field>
+        {!s.state ? (
+          <p className="text-sm text-(--accent-2) md:col-span-2">Set your home state so we can load that state&apos;s high schools and prioritize in-state colleges.</p>
+        ) : null}
+      </div>
+    </TipCard>
   );
 }
 
@@ -192,65 +196,77 @@ function AcademicsAndTesting({ state, patch }: { state: AppState; patch: (fn: (s
   const setA = (k: keyof typeof a, v: string) => patch((prev) => ({ ...prev, academic: { ...prev.academic, [k]: v } }));
   return (
     <div className="grid gap-5">
-      <div className="card grid gap-4 p-5 md:grid-cols-3">
-        <h2 className="serif text-2xl md:col-span-3">Academics</h2>
-        <Field label="Weighted GPA"><input className="field" value={a.weightedGpa} onChange={(e) => setA("weightedGpa", e.target.value)} /></Field>
-        <Field label="Unweighted GPA"><input className="field" value={a.unweightedGpa} onChange={(e) => setA("unweightedGpa", e.target.value)} /></Field>
-        <Field label="GPA scale">
-          <select className="field" value={a.gpaScale} onChange={(e) => setA("gpaScale", e.target.value as typeof a.gpaScale)}>
-            <option value="4.0">4.0</option><option value="5.0">5.0</option><option value="100">100</option><option value="Other">Other</option>
-          </select>
-        </Field>
-        <Field label="Class rank"><input className="field" value={a.classRank} onChange={(e) => setA("classRank", e.target.value)} /></Field>
-        <Field label="Class size"><input className="field" value={a.classSize} onChange={(e) => setA("classSize", e.target.value)} /></Field>
-        <Field label="Class percentile"><input className="field" value={a.percentile} onChange={(e) => setA("percentile", e.target.value)} /></Field>
-      </div>
-      <div className="card p-5">
-        <div className="font-semibold">Academic trends</div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {[["increased", "GPA increased"], ["decreased", "GPA decreased"], ["consistent", "GPA remained relatively consistent"]].map(([id, label]) => (
-            <button key={id} type="button" className={`btn ${a.gpaTrend === id ? "btn-primary" : "btn-ghost"}`} onClick={() => setA("gpaTrend", id)}>{label}</button>
+      <TipCard>
+        <div className="card grid gap-4 p-5 md:grid-cols-3">
+          <h2 className="serif text-2xl md:col-span-3">Academics</h2>
+          <Field label="Weighted GPA"><input className="field" value={a.weightedGpa} onChange={(e) => setA("weightedGpa", e.target.value)} /></Field>
+          <Field label="Unweighted GPA"><input className="field" value={a.unweightedGpa} onChange={(e) => setA("unweightedGpa", e.target.value)} /></Field>
+          <Field label="GPA scale">
+            <select className="field" value={a.gpaScale} onChange={(e) => setA("gpaScale", e.target.value as typeof a.gpaScale)}>
+              <option value="4.0">4.0</option><option value="5.0">5.0</option><option value="100">100</option><option value="Other">Other</option>
+            </select>
+          </Field>
+          <Field label="Class rank"><input className="field" value={a.classRank} onChange={(e) => setA("classRank", e.target.value)} /></Field>
+          <Field label="Class size"><input className="field" value={a.classSize} onChange={(e) => setA("classSize", e.target.value)} /></Field>
+          <Field label="Class percentile"><input className="field" value={a.percentile} onChange={(e) => setA("percentile", e.target.value)} /></Field>
+        </div>
+      </TipCard>
+      <TipCard>
+        <div className="card p-5">
+          <div className="font-semibold">Academic trends</div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {[["increased", "GPA increased"], ["decreased", "GPA decreased"], ["consistent", "GPA remained relatively consistent"]].map(([id, label]) => (
+              <button key={id} type="button" className={`btn ${a.gpaTrend === id ? "btn-primary" : "btn-ghost"}`} onClick={() => setA("gpaTrend", id)}>{label}</button>
+            ))}
+          </div>
+          <Field label="Optional explanation">
+            <textarea className="field mt-2 min-h-24" value={a.gpaTrendExplanation} onChange={(e) => setA("gpaTrendExplanation", e.target.value)} />
+          </Field>
+        </div>
+      </TipCard>
+      <TipCard>
+        <div className="card p-5">
+          <div className="flex items-center justify-between">
+            <div className="font-semibold">Coursework</div>
+            <button type="button" className="btn btn-primary" onClick={() => patch((p) => ({ ...p, courses: [...p.courses, { id: uid(), name: "", subject: "", level: "AP", grade: "", year: "" }] }))}>
+              <Plus size={16} /> Add course
+            </button>
+          </div>
+          <div className="mt-4 grid gap-3">
+            {state.courses.map((c) => <CourseRow key={c.id} course={c} patch={patch} />)}
+          </div>
+        </div>
+      </TipCard>
+
+      <TipCard>
+        <label className="card flex items-center gap-3 p-5">
+          <input type="checkbox" checked={t.testOptional} onChange={(e) => patch((p) => ({ ...p, testing: { ...p.testing, testOptional: e.target.checked } }))} />
+          <div>
+            <div className="font-semibold">Test-optional / no test score</div>
+            <div className="text-sm text-(--muted)">Matching will not penalize missing SAT/ACT at test-optional or test-blind universities.</div>
+          </div>
+        </label>
+      </TipCard>
+      <TipCard>
+        <div className="card grid gap-4 p-5 md:grid-cols-4">
+          <div className="serif text-2xl md:col-span-4">Testing · SAT</div>
+          {(["total", "readingWriting", "math", "date"] as const).map((k) => (
+            <Field key={k} label={k === "readingWriting" ? "Reading/Writing" : k[0].toUpperCase() + k.slice(1)}>
+              <input className="field" value={t.sat?.[k] ?? ""} onChange={(e) => patch((p) => ({ ...p, testing: { ...p.testing, sat: { total: "", readingWriting: "", math: "", date: "", ...p.testing.sat, [k]: e.target.value } } }))} />
+            </Field>
           ))}
         </div>
-        <Field label="Optional explanation">
-          <textarea className="field mt-2 min-h-24" value={a.gpaTrendExplanation} onChange={(e) => setA("gpaTrendExplanation", e.target.value)} />
-        </Field>
-      </div>
-      <div className="card p-5">
-        <div className="flex items-center justify-between">
-          <div className="font-semibold">Coursework</div>
-          <button type="button" className="btn btn-primary" onClick={() => patch((p) => ({ ...p, courses: [...p.courses, { id: uid(), name: "", subject: "", level: "AP", grade: "", year: "" }] }))}>
-            <Plus size={16} /> Add course
-          </button>
+      </TipCard>
+      <TipCard>
+        <div className="card grid gap-4 p-5 md:grid-cols-3">
+          <div className="font-semibold md:col-span-3">ACT</div>
+          {(["composite", "english", "math", "reading", "science", "date"] as const).map((k) => (
+            <Field key={k} label={k[0].toUpperCase() + k.slice(1)}>
+              <input className="field" value={t.act?.[k] ?? ""} onChange={(e) => patch((p) => ({ ...p, testing: { ...p.testing, act: { composite: "", english: "", math: "", reading: "", science: "", date: "", ...p.testing.act, [k]: e.target.value } } }))} />
+            </Field>
+          ))}
         </div>
-        <div className="mt-4 grid gap-3">
-          {state.courses.map((c) => <CourseRow key={c.id} course={c} patch={patch} />)}
-        </div>
-      </div>
-
-      <label className="card flex items-center gap-3 p-5">
-        <input type="checkbox" checked={t.testOptional} onChange={(e) => patch((p) => ({ ...p, testing: { ...p.testing, testOptional: e.target.checked } }))} />
-        <div>
-          <div className="font-semibold">Test-optional / no test score</div>
-          <div className="text-sm text-(--muted)">Matching will not penalize missing SAT/ACT at test-optional or test-blind universities.</div>
-        </div>
-      </label>
-      <div className="card grid gap-4 p-5 md:grid-cols-4">
-        <div className="serif text-2xl md:col-span-4">Testing · SAT</div>
-        {(["total", "readingWriting", "math", "date"] as const).map((k) => (
-          <Field key={k} label={k === "readingWriting" ? "Reading/Writing" : k[0].toUpperCase() + k.slice(1)}>
-            <input className="field" value={t.sat?.[k] ?? ""} onChange={(e) => patch((p) => ({ ...p, testing: { ...p.testing, sat: { total: "", readingWriting: "", math: "", date: "", ...p.testing.sat, [k]: e.target.value } } }))} />
-          </Field>
-        ))}
-      </div>
-      <div className="card grid gap-4 p-5 md:grid-cols-3">
-        <div className="font-semibold md:col-span-3">ACT</div>
-        {(["composite", "english", "math", "reading", "science", "date"] as const).map((k) => (
-          <Field key={k} label={k[0].toUpperCase() + k.slice(1)}>
-            <input className="field" value={t.act?.[k] ?? ""} onChange={(e) => patch((p) => ({ ...p, testing: { ...p.testing, act: { composite: "", english: "", math: "", reading: "", science: "", date: "", ...p.testing.act, [k]: e.target.value } } }))} />
-          </Field>
-        ))}
-      </div>
+      </TipCard>
       <SubjectBlock title="AP scores" list={t.ap} onChange={(ap) => patch((p) => ({ ...p, testing: { ...p.testing, ap } }))} />
       <SubjectBlock title="IB scores" list={t.ib} onChange={(ib) => patch((p) => ({ ...p, testing: { ...p.testing, ib } }))} />
     </div>
@@ -273,7 +289,7 @@ function CourseRow({ course, patch }: { course: Course; patch: (fn: (s: AppState
       }),
     }));
   return (
-    <div className="grid gap-2 rounded-2xl border border-(--line) p-3 md:grid-cols-6">
+    <div className="grid gap-2 rounded-2xl border border-(--line) p-3 sm:grid-cols-2 lg:grid-cols-6">
       <CourseNamePicker level={course.level} value={course.name} onChange={(name) => set("name", name)} />
       <input className="field" placeholder="Subject" value={course.subject} onChange={(e) => set("subject", e.target.value)} />
       <select className="field" value={course.level} onChange={(e) => set("level", e.target.value as CourseLevel)}>
@@ -281,7 +297,7 @@ function CourseRow({ course, patch }: { course: Course; patch: (fn: (s: AppState
       </select>
       <input className="field" placeholder="Grade" value={course.grade} onChange={(e) => set("grade", e.target.value)} />
       <input className="field" placeholder="Year taken" value={course.year} onChange={(e) => set("year", e.target.value)} />
-      <button type="button" className="btn btn-ghost" onClick={() => patch((p) => ({ ...p, courses: p.courses.filter((x) => x.id !== course.id) }))}><Trash2 size={16} /></button>
+      <button type="button" className="btn btn-ghost w-full sm:w-auto" aria-label="Remove course" onClick={() => patch((p) => ({ ...p, courses: p.courses.filter((x) => x.id !== course.id) }))}><Trash2 size={16} /></button>
     </div>
   );
 }
@@ -289,26 +305,28 @@ function CourseRow({ course, patch }: { course: Course; patch: (fn: (s: AppState
 function SubjectBlock({ title, list, onChange }: { title: string; list: { id: string; subject: string; score: string }[]; onChange: (v: { id: string; subject: string; score: string }[]) => void }) {
   const level = title.startsWith("AP") ? "AP" : title.startsWith("IB") ? "IB" : "Other";
   return (
-    <div className="card p-5">
-      <div className="flex items-center justify-between">
-        <div className="font-semibold">{title}</div>
-        <button type="button" className="btn btn-primary" onClick={() => onChange([...list, { id: uid(), subject: "", score: "" }])}><Plus size={16} /> Add</button>
+    <TipCard>
+      <div className="card p-5">
+        <div className="flex items-center justify-between">
+          <div className="font-semibold">{title}</div>
+          <button type="button" className="btn btn-primary" onClick={() => onChange([...list, { id: uid(), subject: "", score: "" }])}><Plus size={16} /> Add</button>
+        </div>
+        <div className="mt-3 grid gap-2">
+          {list.map((row) => (
+            <div key={row.id} className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_7.5rem_2.75rem]">
+              <CourseNamePicker
+                level={level}
+                value={row.subject}
+                onChange={(subject) => onChange(list.map((x) => (x.id === row.id ? { ...x, subject } : x)))}
+                placeholder={`${level} subject`}
+              />
+              <input className="field" placeholder="Score" value={row.score} onChange={(e) => onChange(list.map((x) => (x.id === row.id ? { ...x, score: e.target.value } : x)))} />
+              <button type="button" className="btn btn-ghost" aria-label="Remove score" onClick={() => onChange(list.filter((x) => x.id !== row.id))}><Trash2 size={16} /></button>
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="mt-3 grid gap-2">
-        {list.map((row) => (
-          <div key={row.id} className="grid grid-cols-[1fr_120px_40px] gap-2">
-            <CourseNamePicker
-              level={level}
-              value={row.subject}
-              onChange={(subject) => onChange(list.map((x) => (x.id === row.id ? { ...x, subject } : x)))}
-              placeholder={`${level} subject`}
-            />
-            <input className="field" placeholder="Score" value={row.score} onChange={(e) => onChange(list.map((x) => (x.id === row.id ? { ...x, score: e.target.value } : x)))} />
-            <button type="button" className="btn btn-ghost" onClick={() => onChange(list.filter((x) => x.id !== row.id))}><Trash2 size={16} /></button>
-          </div>
-        ))}
-      </div>
-    </div>
+    </TipCard>
   );
 }
 
@@ -331,16 +349,18 @@ function Activities({ state, patch }: { state: AppState; patch: (fn: (s: AppStat
         </button>
       </div>
       {state.activities.map((a) => (
-        <div key={a.id} className="card overflow-hidden">
-          <button className="flex w-full items-center justify-between p-4 text-left" onClick={() => setOpen(open === a.id ? null : a.id)}>
-            <div>
-              <div className="font-semibold">{a.name || "Untitled activity"}</div>
-              <div className="text-sm text-(--muted)">{a.position} {a.organization ? `· ${a.organization}` : ""}</div>
-            </div>
-            <span className="text-sm text-(--muted)">{open === a.id ? "Hide" : "Edit"}</span>
-          </button>
-          {open === a.id ? <ActivityEditor activity={a} patch={patch} /> : null}
-        </div>
+        <TipCard key={a.id}>
+          <div className="card overflow-hidden">
+            <button className="flex w-full items-center justify-between p-4 text-left" onClick={() => setOpen(open === a.id ? null : a.id)}>
+              <div>
+                <div className="font-semibold">{a.name || "Untitled activity"}</div>
+                <div className="text-sm text-(--muted)">{a.position} {a.organization ? `· ${a.organization}` : ""}</div>
+              </div>
+              <span className="text-sm text-(--muted)">{open === a.id ? "Hide" : "Edit"}</span>
+            </button>
+            {open === a.id ? <ActivityEditor activity={a} patch={patch} /> : null}
+          </div>
+        </TipCard>
       ))}
     </div>
   );
@@ -411,25 +431,27 @@ function Work({ state, patch }: { state: AppState; patch: (fn: (s: AppState) => 
         <button className="btn btn-primary" onClick={() => patch((p) => ({ ...p, work: [emptyWork(), ...p.work] }))}><Plus size={16} /> Add job / internship</button>
       </div>
       {state.work.map((w) => (
-        <div key={w.id} className="card grid gap-3 p-5 md:grid-cols-2">
-          <Field label="Employer"><input className="field" value={w.employer} onChange={(e) => setW(w.id, "employer", e.target.value)} /></Field>
-          <Field label="Position"><input className="field" value={w.position} onChange={(e) => setW(w.id, "position", e.target.value)} /></Field>
-          <Field label="Start date"><input className="field" type="month" value={w.startDate} onChange={(e) => setW(w.id, "startDate", e.target.value)} /></Field>
-          <Field label="End date"><input className="field" value={w.endDate} onChange={(e) => setW(w.id, "endDate", e.target.value)} /></Field>
-          <Field label="Hours per week"><input className="field" value={w.hoursPerWeek} onChange={(e) => setW(w.id, "hoursPerWeek", e.target.value)} /></Field>
-          <Field label="Paid / unpaid">
-            <select className="field" value={w.paid} onChange={(e) => setW(w.id, "paid", e.target.value)}>
-              <option value="">Select</option><option>Paid</option><option>Unpaid</option>
-            </select>
-          </Field>
-          <div className="md:col-span-2"><Field label="Description"><textarea className="field min-h-20" value={w.description} onChange={(e) => setW(w.id, "description", e.target.value)} /></Field></div>
-          <div className="md:col-span-2"><Field label="Major accomplishments"><textarea className="field min-h-20" value={w.accomplishments} onChange={(e) => setW(w.id, "accomplishments", e.target.value)} /></Field></div>
-          <Field label="Leadership responsibilities"><input className="field" value={w.leadershipResponsibilities} onChange={(e) => setW(w.id, "leadershipResponsibilities", e.target.value)} /></Field>
-          <Field label="Revenue generated (only if real)"><input className="field" value={w.revenueGenerated} onChange={(e) => setW(w.id, "revenueGenerated", e.target.value)} /></Field>
-          <Field label="People managed"><input className="field" value={w.peopleManaged} onChange={(e) => setW(w.id, "peopleManaged", e.target.value)} /></Field>
-          <Field label="Quantifiable results"><input className="field" value={w.quantifiableResults} onChange={(e) => setW(w.id, "quantifiableResults", e.target.value)} /></Field>
-          <button className="btn btn-ghost md:col-span-2" onClick={() => patch((p) => ({ ...p, work: p.work.filter((x) => x.id !== w.id) }))}>Remove</button>
-        </div>
+        <TipCard key={w.id}>
+          <div className="card grid gap-3 p-5 md:grid-cols-2">
+            <Field label="Employer"><input className="field" value={w.employer} onChange={(e) => setW(w.id, "employer", e.target.value)} /></Field>
+            <Field label="Position"><input className="field" value={w.position} onChange={(e) => setW(w.id, "position", e.target.value)} /></Field>
+            <Field label="Start date"><input className="field" type="month" value={w.startDate} onChange={(e) => setW(w.id, "startDate", e.target.value)} /></Field>
+            <Field label="End date"><input className="field" value={w.endDate} onChange={(e) => setW(w.id, "endDate", e.target.value)} /></Field>
+            <Field label="Hours per week"><input className="field" value={w.hoursPerWeek} onChange={(e) => setW(w.id, "hoursPerWeek", e.target.value)} /></Field>
+            <Field label="Paid / unpaid">
+              <select className="field" value={w.paid} onChange={(e) => setW(w.id, "paid", e.target.value)}>
+                <option value="">Select</option><option>Paid</option><option>Unpaid</option>
+              </select>
+            </Field>
+            <div className="md:col-span-2"><Field label="Description"><textarea className="field min-h-20" value={w.description} onChange={(e) => setW(w.id, "description", e.target.value)} /></Field></div>
+            <div className="md:col-span-2"><Field label="Major accomplishments"><textarea className="field min-h-20" value={w.accomplishments} onChange={(e) => setW(w.id, "accomplishments", e.target.value)} /></Field></div>
+            <Field label="Leadership responsibilities"><input className="field" value={w.leadershipResponsibilities} onChange={(e) => setW(w.id, "leadershipResponsibilities", e.target.value)} /></Field>
+            <Field label="Revenue generated (only if real)"><input className="field" value={w.revenueGenerated} onChange={(e) => setW(w.id, "revenueGenerated", e.target.value)} /></Field>
+            <Field label="People managed"><input className="field" value={w.peopleManaged} onChange={(e) => setW(w.id, "peopleManaged", e.target.value)} /></Field>
+            <Field label="Quantifiable results"><input className="field" value={w.quantifiableResults} onChange={(e) => setW(w.id, "quantifiableResults", e.target.value)} /></Field>
+            <button className="btn btn-ghost md:col-span-2" onClick={() => patch((p) => ({ ...p, work: p.work.filter((x) => x.id !== w.id) }))}>Remove</button>
+          </div>
+        </TipCard>
       ))}
     </div>
   );
@@ -446,18 +468,20 @@ function Awards({ state, patch }: { state: AppState; patch: (fn: (s: AppState) =
         </button>
       </div>
       {state.awards.map((a) => (
-        <div key={a.id} className="card grid gap-3 p-5 md:grid-cols-2">
-          <Field label="Award name"><input className="field" value={a.name} onChange={(e) => setA(a.id, "name", e.target.value)} /></Field>
-          <Field label="Organization"><input className="field" value={a.organization} onChange={(e) => setA(a.id, "organization", e.target.value)} /></Field>
-          <Field label="Date"><input className="field" type="month" value={a.date} onChange={(e) => setA(a.id, "date", e.target.value)} /></Field>
-          <Field label="Level">
-            <select className="field" value={a.level} onChange={(e) => setA(a.id, "level", e.target.value)}>
-              <option>School</option><option>Local</option><option>Regional</option><option>State</option><option>National</option><option>International</option>
-            </select>
-          </Field>
-          <div className="md:col-span-2"><Field label="What did you do to earn this?"><textarea className="field min-h-20" value={a.description} onChange={(e) => setA(a.id, "description", e.target.value)} /></Field></div>
-          <button className="btn btn-ghost md:col-span-2" onClick={() => patch((p) => ({ ...p, awards: p.awards.filter((x) => x.id !== a.id) }))}>Remove</button>
-        </div>
+        <TipCard key={a.id}>
+          <div className="card grid gap-3 p-5 md:grid-cols-2">
+            <Field label="Award name"><input className="field" value={a.name} onChange={(e) => setA(a.id, "name", e.target.value)} /></Field>
+            <Field label="Organization"><input className="field" value={a.organization} onChange={(e) => setA(a.id, "organization", e.target.value)} /></Field>
+            <Field label="Date"><input className="field" type="month" value={a.date} onChange={(e) => setA(a.id, "date", e.target.value)} /></Field>
+            <Field label="Level">
+              <select className="field" value={a.level} onChange={(e) => setA(a.id, "level", e.target.value)}>
+                <option>School</option><option>Local</option><option>Regional</option><option>State</option><option>National</option><option>International</option>
+              </select>
+            </Field>
+            <div className="md:col-span-2"><Field label="What did you do to earn this?"><textarea className="field min-h-20" value={a.description} onChange={(e) => setA(a.id, "description", e.target.value)} /></Field></div>
+            <button className="btn btn-ghost md:col-span-2" onClick={() => patch((p) => ({ ...p, awards: p.awards.filter((x) => x.id !== a.id) }))}>Remove</button>
+          </div>
+        </TipCard>
       ))}
     </div>
   );
@@ -481,29 +505,31 @@ function Career({ state, patch }: { state: AppState; patch: (fn: (s: AppState) =
   const c = state.career;
   const set = (k: keyof typeof c, v: typeof c[typeof k]) => patch((p) => ({ ...p, career: { ...p.career, [k]: v } }));
   return (
-    <div className="card grid gap-4 p-5 md:grid-cols-2">
-      <div><div className="label">Intended career (press Enter to add)</div><TagInput values={c.intendedCareers} onChange={(v) => set("intendedCareers", v)} placeholder="e.g. Software engineering" /></div>
-      <div><div className="label">Intended major(s)</div><TagInput values={c.intendedMajors} onChange={(v) => set("intendedMajors", v)} placeholder="e.g. Computer Science" /></div>
-      <div className="md:col-span-2">
-        <div className="label">Industry</div>
-        <div className="flex flex-wrap gap-2">
-          {INDUSTRIES.map((ind) => (
-            <button key={ind} className={`btn ${c.industries.includes(ind) ? "btn-primary" : "btn-ghost"}`} onClick={() => set("industries", c.industries.includes(ind) ? c.industries.filter((x) => x !== ind) : [...c.industries, ind])}>{ind}</button>
-          ))}
+    <TipCard>
+      <div className="card grid gap-4 p-5 md:grid-cols-2">
+        <div><div className="label">Intended career (press Enter to add)</div><TagInput values={c.intendedCareers} onChange={(v) => set("intendedCareers", v)} placeholder="e.g. Software engineering" /></div>
+        <div><div className="label">Intended major(s)</div><TagInput values={c.intendedMajors} onChange={(v) => set("intendedMajors", v)} placeholder="e.g. Computer Science" /></div>
+        <div className="md:col-span-2">
+          <div className="label">Industry</div>
+          <div className="flex flex-wrap gap-2">
+            {INDUSTRIES.map((ind) => (
+              <button key={ind} className={`btn ${c.industries.includes(ind) ? "btn-primary" : "btn-ghost"}`} onClick={() => set("industries", c.industries.includes(ind) ? c.industries.filter((x) => x !== ind) : [...c.industries, ind])}>{ind}</button>
+            ))}
+          </div>
         </div>
+        <Field label="Desired salary range"><input className="field" value={c.salaryRange} onChange={(e) => set("salaryRange", e.target.value)} /></Field>
+        <Field label="Graduate school interest">
+          <select className="field" value={c.graduateSchoolInterest} onChange={(e) => set("graduateSchoolInterest", e.target.value)}>
+            <option>No</option><option>Undecided</option><option>Maybe later</option><option>Yes</option>
+          </select>
+        </Field>
+        <div><div className="label">Work environment</div><TagInput values={c.workEnvironment} onChange={(v) => set("workEnvironment", v)} placeholder="e.g. Collaborative" /></div>
+        <div><div className="label">Career geographic preferences</div><TagInput values={c.geographicPreferences} onChange={(v) => set("geographicPreferences", v)} placeholder="e.g. Texas" /></div>
+        <div><div className="label">Remote / hybrid / in-person</div><TagInput values={c.workMode} onChange={(v) => set("workMode", v)} placeholder="e.g. Hybrid" /></div>
+        <div><div className="label">Company size</div><TagInput values={c.companySize} onChange={(v) => set("companySize", v)} placeholder="e.g. Startup" /></div>
+        <Field label="Professional school interest"><input className="field" value={c.professionalSchoolInterest} onChange={(e) => set("professionalSchoolInterest", e.target.value)} /></Field>
       </div>
-      <Field label="Desired salary range"><input className="field" value={c.salaryRange} onChange={(e) => set("salaryRange", e.target.value)} /></Field>
-      <Field label="Graduate school interest">
-        <select className="field" value={c.graduateSchoolInterest} onChange={(e) => set("graduateSchoolInterest", e.target.value)}>
-          <option>No</option><option>Undecided</option><option>Maybe later</option><option>Yes</option>
-        </select>
-      </Field>
-      <div><div className="label">Work environment</div><TagInput values={c.workEnvironment} onChange={(v) => set("workEnvironment", v)} placeholder="e.g. Collaborative" /></div>
-      <div><div className="label">Career geographic preferences</div><TagInput values={c.geographicPreferences} onChange={(v) => set("geographicPreferences", v)} placeholder="e.g. Texas" /></div>
-      <div><div className="label">Remote / hybrid / in-person</div><TagInput values={c.workMode} onChange={(v) => set("workMode", v)} placeholder="e.g. Hybrid" /></div>
-      <div><div className="label">Company size</div><TagInput values={c.companySize} onChange={(v) => set("companySize", v)} placeholder="e.g. Startup" /></div>
-      <Field label="Professional school interest"><input className="field" value={c.professionalSchoolInterest} onChange={(e) => set("professionalSchoolInterest", e.target.value)} /></Field>
-    </div>
+    </TipCard>
   );
 }
 
@@ -513,70 +539,82 @@ function Preferences({ state, patch }: { state: AppState; patch: (fn: (s: AppSta
     patch((s) => ({ ...s, preferences: { ...s.preferences, campusSliders: { ...s.preferences.campusSliders, [k]: v } } }));
   return (
     <div className="grid gap-5">
-      <div className="card p-5">
-        <h2 className="serif text-3xl">What does your ideal college look like?</h2>
-        <p className="mt-1 text-sm text-(--muted)">
-          Everything starts at Neutral (weight 0) and only affects matching after you change it. Overall Match prioritizes admission odds first.
-        </p>
-      </div>
-      <div className="card p-5">
-        <h3 className="font-semibold">Academic preferences</h3>
-        <div className="mt-4 grid gap-3">
-          {ACADEMIC_PREF_KEYS.map(([key, label]) => (
+      <TipCard>
+        <div className="card p-5">
+          <h2 className="serif text-3xl">What does your ideal college look like?</h2>
+          <p className="mt-1 text-sm text-(--muted)">
+            Everything starts at Neutral (weight 0) and only affects matching after you change it. Overall Match prioritizes admission odds first.
+          </p>
+        </div>
+      </TipCard>
+      <TipCard>
+        <div className="card p-5">
+          <h3 className="font-semibold">Academic preferences</h3>
+          <div className="mt-4 grid gap-3">
+            {ACADEMIC_PREF_KEYS.map(([key, label]) => (
+              <div key={key} className="grid items-center gap-2 md:grid-cols-[220px_1fr]">
+                <div className="text-sm">{label}</div>
+                <select className="field" value={p.academic[key]} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, academic: { ...s.preferences.academic, [key]: e.target.value as Importance } } }))}>
+                  {IMPORTANCE_OPTIONS.map((o) => <option key={o}>{o}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+        </div>
+      </TipCard>
+      <TipCard>
+        <div className="card grid gap-5 p-5">
+          <h3 className="font-semibold">Campus preferences</h3>
+          <Slider label="School size" left="Small" right="Very large" value={p.campusSliders.schoolSize} onChange={(v) => setSlider("schoolSize", v)} />
+          <Slider label="Setting" left="Urban" right="Rural" value={p.campusSliders.urbanRural} onChange={(v) => setSlider("urbanRural", v)} />
+          <Slider label="Campus feel" left="Traditional" right="Modern" value={p.campusSliders.traditionalModern} onChange={(v) => setSlider("traditionalModern", v)} />
+          <Slider label="Class size" left="Small classes" right="Large classes" value={p.campusSliders.classSize} onChange={(v) => setSlider("classSize", v)} />
+          {CAMPUS_PREF_KEYS.map(([key, label]) => (
             <div key={key} className="grid items-center gap-2 md:grid-cols-[220px_1fr]">
               <div className="text-sm">{label}</div>
-              <select className="field" value={p.academic[key]} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, academic: { ...s.preferences.academic, [key]: e.target.value as Importance } } }))}>
+              <select className="field" value={p.campus[key]} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, campus: { ...s.preferences.campus, [key]: e.target.value as Importance } } }))}>
                 {IMPORTANCE_OPTIONS.map((o) => <option key={o}>{o}</option>)}
               </select>
             </div>
           ))}
         </div>
-      </div>
-      <div className="card grid gap-5 p-5">
-        <h3 className="font-semibold">Campus preferences</h3>
-        <Slider label="School size" left="Small" right="Very large" value={p.campusSliders.schoolSize} onChange={(v) => setSlider("schoolSize", v)} />
-        <Slider label="Setting" left="Urban" right="Rural" value={p.campusSliders.urbanRural} onChange={(v) => setSlider("urbanRural", v)} />
-        <Slider label="Campus feel" left="Traditional" right="Modern" value={p.campusSliders.traditionalModern} onChange={(v) => setSlider("traditionalModern", v)} />
-        <Slider label="Class size" left="Small classes" right="Large classes" value={p.campusSliders.classSize} onChange={(v) => setSlider("classSize", v)} />
-        {CAMPUS_PREF_KEYS.map(([key, label]) => (
-          <div key={key} className="grid items-center gap-2 md:grid-cols-[220px_1fr]">
-            <div className="text-sm">{label}</div>
-            <select className="field" value={p.campus[key]} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, campus: { ...s.preferences.campus, [key]: e.target.value as Importance } } }))}>
+      </TipCard>
+      <TipCard>
+        <div className="card grid gap-4 p-5 md:grid-cols-2">
+          <h3 className="font-semibold md:col-span-2">Geographic preferences</h3>
+          <div><div className="label">Preferred states</div><StateMulti values={p.geographic.preferredStates} onChange={(v) => patch((s) => ({ ...s, preferences: { ...s.preferences, geographic: { ...s.preferences.geographic, preferredStates: v } } }))} /></div>
+          <div><div className="label">States willing to consider</div><StateMulti values={p.geographic.considerStates} onChange={(v) => patch((s) => ({ ...s, preferences: { ...s.preferences, geographic: { ...s.preferences.geographic, considerStates: v } } }))} /></div>
+          <div><div className="label">States unwilling to attend</div><StateMulti values={p.geographic.unwillingStates} onChange={(v) => patch((s) => ({ ...s, preferences: { ...s.preferences, geographic: { ...s.preferences.geographic, unwillingStates: v } } }))} /></div>
+          <Field label="Maximum distance from home (miles)">
+            <input className="field" value={p.geographic.maxDistanceMiles} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, geographic: { ...s.preferences.geographic, maxDistanceMiles: e.target.value } } }))} />
+          </Field>
+        </div>
+      </TipCard>
+      <TipCard>
+        <div className="card p-5">
+          <h3 className="font-semibold">Lifestyle</h3>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {LIFESTYLE_TAGS.map((tag) => (
+              <button key={tag} className={`btn ${p.lifestyle.tags.includes(tag) ? "btn-primary" : "btn-ghost"}`} onClick={() => patch((s) => ({ ...s, preferences: { ...s.preferences, lifestyle: { tags: p.lifestyle.tags.includes(tag) ? p.lifestyle.tags.filter((x) => x !== tag) : [...p.lifestyle.tags, tag] } } }))}>{tag}</button>
+            ))}
+          </div>
+        </div>
+      </TipCard>
+      <TipCard>
+        <div className="card grid gap-4 p-5 md:grid-cols-2">
+          <h3 className="font-semibold md:col-span-2">Financial preferences</h3>
+          <Field label="Maximum annual cost"><input className="field" value={p.financial.maxAnnualCost} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, financial: { ...s.preferences.financial, maxAnnualCost: e.target.value } } }))} /></Field>
+          <Field label="Importance of financial aid">
+            <select className="field" value={p.financial.financialAidImportance} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, financial: { ...s.preferences.financial, financialAidImportance: e.target.value as Importance } } }))}>
               {IMPORTANCE_OPTIONS.map((o) => <option key={o}>{o}</option>)}
             </select>
-          </div>
-        ))}
-      </div>
-      <div className="card grid gap-4 p-5 md:grid-cols-2">
-        <h3 className="font-semibold md:col-span-2">Geographic preferences</h3>
-        <div><div className="label">Preferred states</div><StateMulti values={p.geographic.preferredStates} onChange={(v) => patch((s) => ({ ...s, preferences: { ...s.preferences, geographic: { ...s.preferences.geographic, preferredStates: v } } }))} /></div>
-        <div><div className="label">States willing to consider</div><StateMulti values={p.geographic.considerStates} onChange={(v) => patch((s) => ({ ...s, preferences: { ...s.preferences, geographic: { ...s.preferences.geographic, considerStates: v } } }))} /></div>
-        <div><div className="label">States unwilling to attend</div><StateMulti values={p.geographic.unwillingStates} onChange={(v) => patch((s) => ({ ...s, preferences: { ...s.preferences, geographic: { ...s.preferences.geographic, unwillingStates: v } } }))} /></div>
-        <Field label="Maximum distance from home (miles)">
-          <input className="field" value={p.geographic.maxDistanceMiles} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, geographic: { ...s.preferences.geographic, maxDistanceMiles: e.target.value } } }))} />
-        </Field>
-      </div>
-      <div className="card p-5">
-        <h3 className="font-semibold">Lifestyle</h3>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {LIFESTYLE_TAGS.map((tag) => (
-            <button key={tag} className={`btn ${p.lifestyle.tags.includes(tag) ? "btn-primary" : "btn-ghost"}`} onClick={() => patch((s) => ({ ...s, preferences: { ...s.preferences, lifestyle: { tags: p.lifestyle.tags.includes(tag) ? p.lifestyle.tags.filter((x) => x !== tag) : [...p.lifestyle.tags, tag] } } }))}>{tag}</button>
-          ))}
+          </Field>
+          <Field label="Maximum acceptable student debt"><input className="field" value={p.financial.maxStudentDebt} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, financial: { ...s.preferences.financial, maxStudentDebt: e.target.value } } }))} /></Field>
+          <label className="flex items-center gap-2"><input type="checkbox" checked={p.financial.needBasedAid} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, financial: { ...s.preferences.financial, needBasedAid: e.target.checked } } }))} /> Need-based aid matters</label>
+          <label className="flex items-center gap-2"><input type="checkbox" checked={p.financial.meritScholarships} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, financial: { ...s.preferences.financial, meritScholarships: e.target.checked } } }))} /> Merit scholarships matter</label>
+          <label className="flex items-center gap-2"><input type="checkbox" checked={p.financial.willingOutOfState} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, financial: { ...s.preferences.financial, willingOutOfState: e.target.checked } } }))} /> Willing to attend out-of-state</label>
         </div>
-      </div>
-      <div className="card grid gap-4 p-5 md:grid-cols-2">
-        <h3 className="font-semibold md:col-span-2">Financial preferences</h3>
-        <Field label="Maximum annual cost"><input className="field" value={p.financial.maxAnnualCost} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, financial: { ...s.preferences.financial, maxAnnualCost: e.target.value } } }))} /></Field>
-        <Field label="Importance of financial aid">
-          <select className="field" value={p.financial.financialAidImportance} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, financial: { ...s.preferences.financial, financialAidImportance: e.target.value as Importance } } }))}>
-            {IMPORTANCE_OPTIONS.map((o) => <option key={o}>{o}</option>)}
-          </select>
-        </Field>
-        <Field label="Maximum acceptable student debt"><input className="field" value={p.financial.maxStudentDebt} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, financial: { ...s.preferences.financial, maxStudentDebt: e.target.value } } }))} /></Field>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={p.financial.needBasedAid} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, financial: { ...s.preferences.financial, needBasedAid: e.target.checked } } }))} /> Need-based aid matters</label>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={p.financial.meritScholarships} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, financial: { ...s.preferences.financial, meritScholarships: e.target.checked } } }))} /> Merit scholarships matter</label>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={p.financial.willingOutOfState} onChange={(e) => patch((s) => ({ ...s, preferences: { ...s.preferences, financial: { ...s.preferences.financial, willingOutOfState: e.target.checked } } }))} /> Willing to attend out-of-state</label>
-      </div>
+      </TipCard>
     </div>
   );
 }

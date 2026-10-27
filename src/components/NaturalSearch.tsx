@@ -43,12 +43,12 @@ export function NaturalSearch({ placeholder }: { placeholder?: string }) {
         }}
       >
         <input
-          className="field min-w-60 flex-1"
+          className="field min-w-0 flex-1 basis-full sm:min-w-60 sm:basis-auto"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={placeholder ?? "Find schools similar to Texas A&M but easier for me to get into."}
         />
-        <button className="btn btn-primary" type="submit">
+        <button className="btn btn-primary w-full sm:w-auto" type="submit">
           Search
         </button>
       </form>

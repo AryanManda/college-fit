@@ -488,6 +488,7 @@ export interface ResumeVersion {
 
 export interface ResumeScore {
   overall: number;
+  rating: "Excellent" | "Strong" | "Good" | "Developing" | "Needs work";
   formatting: number;
   readability: number;
   actionVerbs: number;
@@ -498,6 +499,7 @@ export interface ResumeScore {
   relevantExperience: number;
   recommendations: string[];
   strengths: string[];
+  improvements: { area: string; tip: string; priority: "high" | "medium" | "low" }[];
 }
 
 export interface StrengthCategory {

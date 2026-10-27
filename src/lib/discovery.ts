@@ -1,30 +1,53 @@
 import type { AdmissionCategory, AppState, College, MatchBreakdown } from "./types";
 import { COLLEGES, getCollege } from "../data/colleges";
+import { collegeFeedUnlock } from "./completion";
 import { matchAll, matchCollege, recommendationScore, studentAcademicStrength } from "./matching";
 import { gpaOnFour, parseNum } from "./defaults";
-import { cityCoordsByName, collegeCoords, estimateDriveMinutes, haversineMiles } from "./geo";
+import { cityCoordsByName, collegeCoords, collegeWithinRange, estimateDriveMinutes, haversineMiles, isLocationRangeActive } from "./geo";
 
 export function byCategory(all: MatchBreakdown[], cat: AdmissionCategory) {
   return all.filter((m) => m.category === cat);
 }
 
 export function recommendedList(state: AppState) {
-  const all = matchAll(state);
   const strength = studentAcademicStrength(state);
+  const rangeOn = isLocationRangeActive(state);
+  const unlock = collegeFeedUnlock(state);
+  const empty = {
+    all: [] as MatchBreakdown[],
+    likely: [] as MatchBreakdown[],
+    target: [] as MatchBreakdown[],
+    reach: [] as MatchBreakdown[],
+    highReach: [] as MatchBreakdown[],
+    inState: [] as MatchBreakdown[],
+    outState: [] as MatchBreakdown[],
+    achievable: [] as MatchBreakdown[],
+  };
+  if (unlock.limit === 0) return empty;
+
+  const all = matchAll(state).filter((m) => {
+    if (!rangeOn) return true;
+    const c = getCollege(m.collegeId);
+    return c ? collegeWithinRange(state, c) : false;
+  });
   const ranked = (list: MatchBreakdown[]) =>
     [...list].sort((a, b) => {
       const ca = getCollege(a.collegeId);
       const cb = getCollege(b.collegeId);
       if (!ca || !cb) return 0;
-      return recommendationScore(state, b, cb, strength) - recommendationScore(state, a, ca, strength);
+      const scoreDiff =
+        recommendationScore(state, b, cb, strength) - recommendationScore(state, a, ca, strength);
+      if (scoreDiff !== 0) return scoreDiff;
+      return (a.miles ?? 99999) - (b.miles ?? 99999);
     });
 
+  const cap = (n: number) => Math.min(n, Number.isFinite(unlock.limit) ? unlock.limit : n);
   const take = (cat: AdmissionCategory, n: number) =>
-    ranked(byCategory(all, cat).filter((m) => !m.outOfRange || cat === "High Reach")).slice(0, n);
+    ranked(byCategory(all, cat).filter((m) => !m.outOfRange || cat === "High Reach")).slice(0, cap(n));
 
   const achievable = ranked(
     all.filter((m) => !m.outOfRange && (m.category === "Likely" || m.category === "Target")),
-  ).slice(0, 10);
+  ).slice(0, cap(unlock.level === "starter" ? 6 : 10));
 
   return {
     all,
@@ -34,10 +57,10 @@ export function recommendedList(state: AppState) {
     highReach: take("High Reach", 3),
     inState: ranked(
       all.filter((m) => m.inStateForStudent && !m.outOfRange && (m.category === "Likely" || m.category === "Target")),
-    ),
+    ).slice(0, cap(10)),
     outState: ranked(
       all.filter((m) => !m.inStateForStudent && !m.outOfRange && (m.category === "Likely" || m.category === "Target")),
-    ),
+    ).slice(0, cap(10)),
     achievable,
   };
 }
@@ -174,7 +197,19 @@ export function runNaturalSearch(state: AppState, q: string) {
     if (f.nearHome && m.miles != null && m.miles > 80) return false;
     return true;
   });
-  return { filters: f, results: all.slice(0, 15) };
+  const strength = studentAcademicStrength(state);
+  const results = [...all]
+    .sort((a, b) => {
+      const ca = getCollege(a.collegeId);
+      const cb = getCollege(b.collegeId);
+      if (!ca || !cb) return 0;
+      const scoreDiff =
+        recommendationScore(state, b, cb, strength) - recommendationScore(state, a, ca, strength);
+      if (scoreDiff !== 0) return scoreDiff;
+      return (a.miles ?? 99999) - (b.miles ?? 99999);
+    })
+    .slice(0, 15);
+  return { filters: f, results };
 }
 
 export function rangeStatus(student: number | null, low?: number, high?: number) {

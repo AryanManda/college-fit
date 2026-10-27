@@ -272,6 +272,7 @@ export function scoreResume(resume: ResumeVersion, state: AppState): ResumeScore
   const weak = all.filter((t) => WEAK_VERBS.some((v) => t.trim().toLowerCase().startsWith(v))).length;
   const long = all.filter((t) => t.split(/\s+/).length > 32).length;
   const short = all.filter((t) => t.split(/\s+/).length < 8).length;
+  const emptySections = resume.sections.filter((s) => !s.items.some((i) => i.bullets.some((b) => b.text.trim()))).length;
 
   const formatting = resume.font && resume.margin >= 0.5 && resume.margin <= 1 ? 90 : 70;
   const readability = clamp(92 - long * 8 - short * 4);
@@ -296,20 +297,86 @@ export function scoreResume(resume: ResumeVersion, state: AppState): ResumeScore
       relevantExperience * 0.1,
   );
 
+  const rating: ResumeScore["rating"] =
+    overall >= 88 ? "Excellent" : overall >= 75 ? "Strong" : overall >= 62 ? "Good" : overall >= 48 ? "Developing" : "Needs work";
+
   const recommendations: string[] = [];
   const strengths: string[] = [];
+  const improvements: ResumeScore["improvements"] = [];
+
   const unquant = n - quantified;
-  if (unquant > 0) recommendations.push(`${unquant} bullet${unquant === 1 ? "" : "s"} could be quantified with real numbers you already know.`);
-  if (weak > 0) recommendations.push(`${weak} bullet${weak === 1 ? "" : "s"} begin with weak/non-action verbs.`);
+  if (unquant > 0) {
+    const tip = `${unquant} bullet${unquant === 1 ? "" : "s"} lack numbers. Add real counts (hours, people, $, % growth) you can verify — don't invent stats.`;
+    recommendations.push(tip);
+    improvements.push({ area: "Quantification", tip, priority: unquant / n > 0.5 ? "high" : "medium" });
+  }
+  if (weak > 0) {
+    const tip = `${weak} bullet${weak === 1 ? "" : "s"} start with weak verbs (helped, worked on…). Rewrite with stronger action verbs and use Improve.`;
+    recommendations.push(tip);
+    improvements.push({ area: "Action verbs", tip, priority: "high" });
+  }
+  if (long > 0) {
+    const tip = `${long} bullet${long === 1 ? "" : "s"} are too long (32+ words). Trim to one clear result per line.`;
+    recommendations.push(tip);
+    improvements.push({ area: "Conciseness", tip, priority: "medium" });
+  }
+  if (short > 2) {
+    const tip = `${short} bullets are very short — add what you did and what changed.`;
+    recommendations.push(tip);
+    improvements.push({ area: "Impact", tip, priority: "medium" });
+  }
   const edu = resume.sections.find((s) => s.type === "education");
-  if (edu && edu.items.some((i) => i.bullets.length > 6))
-    recommendations.push("Your education section could be condensed.");
+  if (edu && edu.items.some((i) => i.bullets.length > 6)) {
+    const tip = "Your education section is crowded — keep GPA, coursework highlights, and 2–3 standouts.";
+    recommendations.push(tip);
+    improvements.push({ area: "Education", tip, priority: "low" });
+  }
+  if (!resume.sections.some((s) => s.type === "experience" || /experience|work|intern/i.test(s.heading))) {
+    const tip = "Add an Experience or Internships section so admissions and employers see applied work.";
+    recommendations.push(tip);
+    improvements.push({ area: "Structure", tip, priority: "high" });
+  }
+  if (all.length < 4) {
+    const tip = "You have few bullets overall. Aim for 2–4 strong bullets per role or activity.";
+    recommendations.push(tip);
+    improvements.push({ area: "Depth", tip, priority: "high" });
+  }
+  if (emptySections > 0) {
+    const tip = "Remove empty sections or fill them — blank headings look unfinished.";
+    recommendations.push(tip);
+    improvements.push({ area: "Formatting", tip, priority: "low" });
+  }
+  if (actionVerbs < 55) {
+    improvements.push({
+      area: "Action verbs",
+      tip: "Start more bullets with verbs like Led, Built, Analyzed, Organized, Designed.",
+      priority: "high",
+    });
+  }
+  if (quantification < 50 && !improvements.some((i) => i.area === "Quantification")) {
+    improvements.push({
+      area: "Quantification",
+      tip: "Roughly half your bullets should include a real number from your experience.",
+      priority: "high",
+    });
+  }
+
   if (state.activities.filter((a) => a.hasLeadership).length >= 2)
     strengths.push("Your leadership experience is a major strength.");
   if (quantified / n >= 0.5) strengths.push("Many bullets already include numbers, which helps credibility.");
+  if (action / n >= 0.6) strengths.push("Most bullets open with strong action verbs.");
+  if (overall >= 75) strengths.push("Overall resume strength is competitive for applications — keep refining weak lines.");
+
+  // Dedupe improvements by area (keep highest priority)
+  const priorityRank = { high: 0, medium: 1, low: 2 };
+  const byArea = new Map<string, ResumeScore["improvements"][0]>();
+  for (const item of improvements.sort((a, b) => priorityRank[a.priority] - priorityRank[b.priority])) {
+    if (!byArea.has(item.area)) byArea.set(item.area, item);
+  }
 
   return {
     overall,
+    rating,
     formatting,
     readability,
     actionVerbs,
@@ -320,6 +387,7 @@ export function scoreResume(resume: ResumeVersion, state: AppState): ResumeScore
     relevantExperience,
     recommendations,
     strengths,
+    improvements: [...byArea.values()].slice(0, 6),
   };
 }
 

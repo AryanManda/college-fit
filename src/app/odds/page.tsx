@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { COLLEGES, getCollege } from "../../data/colleges";
+import { useEffect, useState } from "react";
+import { COLLEGES, getCollege, rememberCollege } from "../../data/colleges";
 import { admissionsBreakdown, improveOdds, similarMoreAchievable, applyWhatIf, whatIfShifts } from "../../lib/discovery";
 import { buildPathForward } from "../../lib/career-roadmap";
+import { gpaOnFour } from "../../lib/defaults";
 import { matchAll } from "../../lib/matching";
 import { useStore } from "../../lib/store";
 import { PageHeader, ScoreBar } from "../../components/ui";
@@ -15,11 +16,13 @@ import { ImproveOddsPanel } from "../../components/ImproveOddsPanel";
 import { ProfilePromptBanner } from "../../components/ProfilePromptBanner";
 import { scoreTone } from "../../lib/format";
 import Link from "next/link";
+import type { College } from "../../lib/types";
 
 export default function OddsPage() {
   const { state, hydrated } = useStore();
   const [q, setQ] = useState("");
   const [id, setId] = useState("ut-austin");
+  const [hits, setHits] = useState<College[]>([]);
   const [sat, setSat] = useState(1280);
   const [gpa, setGpa] = useState(3.6);
   const [apExtra, setApExtra] = useState(0);
@@ -35,22 +38,47 @@ export default function OddsPage() {
   useEffect(() => {
     const school = new URLSearchParams(window.location.search).get("school");
     if (school && getCollege(school)) setId(school);
+    else if (school) {
+      fetch(`/api/colleges/${encodeURIComponent(school)}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data?.school) {
+            rememberCollege(data.school);
+            setId(data.school.id);
+          }
+        })
+        .catch(() => undefined);
+    }
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
     const profileSat = Number(state.testing.sat?.total || 0);
-    const profileGpa = Number(state.academic.unweightedGpa || state.academic.weightedGpa || 0);
+    const profileGpa = gpaOnFour(state);
     if (profileSat) setSat(profileSat);
-    if (profileGpa) setGpa(Math.min(4, profileGpa));
-  }, [hydrated, state.testing.sat?.total, state.academic.unweightedGpa, state.academic.weightedGpa]);
+    if (profileGpa !== null) setGpa(Math.min(4.3, profileGpa));
+  }, [hydrated, state.testing.sat?.total, state.academic.unweightedGpa, state.academic.weightedGpa, state.academic.gpaScale]);
 
-  const hits = useMemo(
-    () => COLLEGES.filter((c) => `${c.name} ${c.shortName}`.toLowerCase().includes(q.toLowerCase())).slice(0, 8),
-    [q],
-  );
+  useEffect(() => {
+    const local = COLLEGES.filter((c) => `${c.name} ${c.shortName}`.toLowerCase().includes(q.toLowerCase())).slice(0, 8);
+    if (!q.trim()) {
+      setHits(local);
+      return;
+    }
+    const t = window.setTimeout(() => {
+      fetch(`/api/colleges/search?q=${encodeURIComponent(q)}&limit=12`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          const schools = (data?.schools as College[] | undefined) ?? local;
+          schools.forEach(rememberCollege);
+          setHits(schools.slice(0, 8));
+        })
+        .catch(() => setHits(local));
+    }, 280);
+    return () => window.clearTimeout(t);
+  }, [q]);
 
-  if (!college) return null;
+  if (!college) return <div className="text-(--muted)">Loading school…</div>;
   const br = admissionsBreakdown(state, college);
   const sim = similarMoreAchievable(state, college, 4);
   const simulated = applyWhatIf(state, {

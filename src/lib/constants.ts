@@ -1,16 +1,16 @@
 import type { ActivityCategory, FactorImportance, Importance } from "./types";
 
-export const APP_NAME = "CollegeMatch AI";
-export const APP_TAGLINE = "Don't just find your dream school. Find the school that can actually get you where you want to go.";
+export const APP_NAME = "Aether";
+export const APP_TAGLINE = "College · Career · Resume";
 
 export const NAV_ITEMS = [
-  { href: "/", label: "Dashboard", icon: "LayoutDashboard" },
+  { href: "/home", label: "Dashboard", icon: "LayoutDashboard" },
   { href: "/profile", label: "My Profile", icon: "UserRound" },
   { href: "/match", label: "College Match", icon: "Sparkles" },
   { href: "/colleges", label: "Explore Colleges", icon: "GraduationCap" },
   { href: "/compare", label: "Compare Colleges", icon: "Columns3" },
   { href: "/resume", label: "Resume Builder", icon: "FileText" },
-  { href: "/strength", label: "Application Strength", icon: "Gauge" },
+  { href: "/strength", label: "Overall Strength", icon: "Gauge" },
   { href: "/settings", label: "Settings", icon: "Settings" },
 ] as const;
 

@@ -50,7 +50,9 @@ const CITY: Record<string, LatLng> = {
   "Chapel Hill|NC": { lat: 35.9132, lng: -79.0558 }, "Austin|TX": { lat: 30.2672, lng: -97.7431 },
   "San Marcos|TX": { lat: 29.8833, lng: -97.9414 }, "Lubbock|TX": { lat: 33.5779, lng: -101.8552 },
   "Madison|WI": { lat: 43.0731, lng: -89.4012 }, "Champaign|IL": { lat: 40.1164, lng: -88.2434 },
-  "Seattle|WA": { lat: 47.6062, lng: -122.3321 }, "Columbus|OH": { lat: 39.9612, lng: -82.9988 },
+  "Seattle|WA": { lat: 47.6062, lng: -122.3321 }, "Pullman|WA": { lat: 46.7298, lng: -117.1817 },
+  "Bellingham|WA": { lat: 48.7519, lng: -122.4787 }, "Spokane|WA": { lat: 47.6588, lng: -117.426 },
+  "Columbus|OH": { lat: 39.9612, lng: -82.9988 },
   "University Park|PA": { lat: 40.8148, lng: -77.865 }, "Gainesville|FL": { lat: 29.6516, lng: -82.3248 },
   "Athens|GA": { lat: 33.9519, lng: -83.3576 }, "College Station|TX": { lat: 30.628, lng: -96.3344 },
   "West Lafayette|IN": { lat: 40.4259, lng: -86.9081 }, "Blacksburg|VA": { lat: 37.2296, lng: -80.4139 },
@@ -164,6 +166,85 @@ export function maxMilesFromPreset(preset: DistancePreset, custom: string, homeS
 export function maxDriveMinutes(preset: DriveTimePreset): number | null {
   if (preset === "none") return null;
   return Number(preset);
+}
+
+/** Miles cap for hard filtering. -1 = same-state only. null = no mile cap (US/world). */
+export function distanceRangeCap(state: AppState): number | null {
+  const geo = state.preferences.geographic;
+  const preset = geo.distancePreset;
+  if (preset === "world" || preset === "us") return null;
+  if (preset === "state") return -1;
+  if (preset === "custom") {
+    const n = Number(geo.customMaxMiles || geo.maxDistanceMiles);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+  const n = Number(preset);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function isLocationRangeActive(state: AppState): boolean {
+  const geo = state.preferences.geographic;
+  if (distanceRangeCap(state) != null) return true;
+  if (maxDriveMinutes(geo.maxDriveTime) != null) return true;
+  if (geo.attendanceScope === "only-state" || geo.attendanceScope === "state-neighbors") return true;
+  return false;
+}
+
+/** Hard filter: college must fall inside the student's location + range prefs. */
+export function collegeWithinRange(state: AppState, college: College): boolean {
+  const geo = state.preferences.geographic;
+  const home = state.student.state;
+
+  if (geo.unwillingStates.includes(college.state)) return false;
+
+  if (geo.attendanceScope === "only-state") {
+    if (home && college.state !== home) return false;
+  } else if (geo.attendanceScope === "state-neighbors") {
+    if (home && college.state !== home && !(NEIGHBORS[home] ?? []).includes(college.state)) return false;
+  }
+
+  const cap = distanceRangeCap(state);
+  const miles = distanceMiles(state, college);
+  const drive = miles != null ? estimateDriveMinutes(miles) : null;
+
+  if (cap === -1) {
+    if (home && college.state !== home) return false;
+  } else if (cap != null) {
+    if (miles == null) return false;
+    if (miles > cap) return false;
+  }
+
+  const driveCap = maxDriveMinutes(geo.maxDriveTime);
+  if (driveCap != null) {
+    if (drive == null) return false;
+    if (drive > driveCap) return false;
+  }
+
+  return true;
+}
+
+export function describeLocationRange(state: AppState): string {
+  const geo = state.preferences.geographic;
+  const origin = studentCoords(state);
+  const place = [state.student.city, state.student.state].filter(Boolean).join(", ") || "your location";
+  const bits: string[] = [];
+
+  const cap = distanceRangeCap(state);
+  if (cap === -1) bits.push(`in ${state.student.state || "your state"}`);
+  else if (cap != null) bits.push(`within ${cap} miles of ${place}`);
+  else if (origin) bits.push(`near ${place}`);
+
+  const driveCap = maxDriveMinutes(geo.maxDriveTime);
+  if (driveCap != null) bits.push(`≤ ${driveCap} min estimated drive`);
+
+  if (geo.attendanceScope === "only-state" && state.student.state) {
+    bits.push(`only ${state.student.state}`);
+  } else if (geo.attendanceScope === "state-neighbors" && state.student.state) {
+    bits.push(`${state.student.state} + neighboring states`);
+  }
+
+  if (!bits.length) return "No distance filter — showing schools nationwide";
+  return bits.join(" · ");
 }
 
 export function inferKind(college: Pick<College, "name" | "type" | "undergraduateEnrollment" | "religiousAffiliation">): InstitutionKind {

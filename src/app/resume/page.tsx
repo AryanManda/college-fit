@@ -1,12 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { GripVertical, Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import { FilePickButton } from "../../components/FilePickButton";
 import { useStore } from "../../lib/store";
 import { uid } from "../../lib/id";
+import { extractDocumentText } from "../../lib/extract-document";
 import { improveBullet, parseResumeText, resumeFromProfile, scoreResume, type ImproveResult } from "../../lib/resume";
 import type { ResumeLength, ResumeSection, ResumeTone, ResumeVersion } from "../../lib/types";
-import { PageHeader, ScoreBar } from "../../components/ui";
+import { PageHeader, Ring, ScoreBar } from "../../components/ui";
+import { CollegesTopTabs } from "../../components/CollegesTopTabs";
 
 const FONTS = ["Arial", "Calibri", "Times New Roman", "Garamond", "Georgia", "Helvetica"];
 const TONES: ResumeTone[] = ["Professional", "Finance", "Consulting", "Government", "Academic", "Technical", "Entrepreneurial"];
@@ -18,7 +21,9 @@ export default function ResumePage() {
   const [length, setLength] = useState<ResumeLength>("Balanced");
   const [improve, setImprove] = useState<{ sectionId: string; itemId: string; bulletId: string; result: ImproveResult } | null>(null);
   const [paste, setPaste] = useState("");
-  const [dragId, setDragId] = useState<string | null>(null);
+  const [uploadMsg, setUploadMsg] = useState<string | null>(null);
+  const [uploadErr, setUploadErr] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const resume = state.resumes.find((r) => r.id === state.activeResumeId) ?? state.resumes[0] ?? null;
   const score = useMemo(() => (resume ? scoreResume(resume, state) : null), [resume, state]);
@@ -56,18 +61,11 @@ export default function ResumePage() {
       ],
     });
 
-  const onUpload = async (file: File) => {
-    let text = "";
-    if (file.name.endsWith(".txt") || file.type.startsWith("text/")) text = await file.text();
-    else text = await file.text().catch(() => "");
-    if (!text || text.includes("\u0000")) {
-      alert("This MVP parses .txt and pasted text most reliably. For PDF/DOCX, paste the text, then edit.");
-      return;
-    }
+  const applyParsedText = (text: string, name: string, sourceLabel: string) => {
     const sections = parseResumeText(text);
-    save({
+    const next: ResumeVersion = {
       id: uid(),
-      name: file.name.replace(/\.[^.]+$/, ""),
+      name,
       updatedAt: new Date().toISOString(),
       font: "Arial",
       fontSize: 11,
@@ -78,24 +76,58 @@ export default function ResumePage() {
       headerName: `${state.student.firstName} ${state.student.lastName}`.trim() || "Your Name",
       headerContact: state.student.email,
       sections,
-    });
+    };
+    save(next);
+    const rated = scoreResume(next, state);
+    setUploadMsg(`Parsed ${sourceLabel}. Rating: ${rated.rating} (${rated.overall}/100). See Where to improve →`);
+    setUploadErr(null);
+  };
+
+  const onUpload = async (file: File) => {
+    setUploading(true);
+    setUploadErr(null);
+    setUploadMsg(null);
+    try {
+      const { text, source, pages } = await extractDocumentText(file);
+      const label =
+        source === "pdf"
+          ? `PDF${pages ? ` (${pages} page${pages === 1 ? "" : "s"})` : ""}`
+          : source === "docx"
+            ? "Word document"
+            : "text file";
+      applyParsedText(text, file.name.replace(/\.[^.]+$/, "") || "Uploaded Resume", label);
+    } catch (err) {
+      setUploadErr(err instanceof Error ? err.message : "Could not read that file.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
     <div>
       <PageHeader
         title="Student Resume Builder"
-        subtitle="Build a standout resume for college applications, scholarships, and internships. Fill in the sections below to generate your professional document."
+        subtitle="Upload a PDF or Word resume, get a strength rating, and see exactly where to improve — without inventing stats."
         actions={
-          <div className="flex flex-wrap gap-2">
-            <button className="btn btn-primary" onClick={createFromProfile}>Generate &amp; Export Resume</button>
-            <label className="btn btn-ghost cursor-pointer">
-              <Upload size={16} /> Upload
-              <input type="file" className="hidden" accept=".txt,.pdf,.docx,.doc" onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0])} />
-            </label>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+            <button type="button" className="btn btn-primary w-full sm:w-auto" onClick={createFromProfile}>Generate from profile</button>
+            <FilePickButton busy={uploading} onFile={onUpload} className="btn btn-ghost w-full sm:w-auto">
+              <Upload size={16} /> {uploading ? "Parsing…" : "Upload PDF / DOCX"}
+            </FilePickButton>
           </div>
         }
       />
+
+      <CollegesTopTabs />
+
+      {uploadMsg ? (
+        <div className="card mb-4 border-(--accent)/30 bg-(--accent-soft) p-4 text-sm font-semibold text-(--accent)">
+          {uploadMsg}
+        </div>
+      ) : null}
+      {uploadErr ? (
+        <div className="card mb-4 border-(--danger)/30 bg-(--banner) p-4 text-sm text-(--danger)">{uploadErr}</div>
+      ) : null}
 
       <div className="mb-4 flex flex-wrap gap-2">
         {state.resumes.map((r) => (
@@ -112,7 +144,7 @@ export default function ResumePage() {
       <details className="card mb-4 p-4">
         <summary className="cursor-pointer font-semibold">Paste resume text to parse</summary>
         <textarea className="field mt-3 min-h-32" value={paste} onChange={(e) => setPaste(e.target.value)} placeholder={"Education\nWestlake High School\n- GPA 3.91\nExperience\nIntern\n- Managed social media for organization."} />
-        <button className="btn btn-primary mt-3" onClick={() => { if (paste.trim()) { const sections = parseResumeText(paste); save({ ...(resume ?? resumeFromProfile(state)), id: uid(), name: "Parsed Resume", sections }); setPaste(""); } }}>Parse</button>
+        <button className="btn btn-primary mt-3" onClick={() => { if (paste.trim()) { applyParsedText(paste, "Parsed Resume", "pasted text"); setPaste(""); } }}>Parse</button>
       </details>
 
       {!resume ? (
@@ -151,38 +183,52 @@ export default function ResumePage() {
             </div>
 
             <div
-              className="card p-6"
+              className="card min-w-0 overflow-x-auto"
               style={{
                 fontFamily: resume.font,
                 fontSize: resume.fontSize,
                 lineHeight: resume.lineSpacing,
-                padding: `${resume.margin}in`,
+                padding: `min(${resume.margin}in, 1rem)`,
                 textAlign: resume.alignment,
               }}
             >
               <input className="w-full border-none bg-transparent text-2xl font-semibold outline-none" value={resume.headerName} onChange={(e) => save({ ...resume, headerName: e.target.value })} />
               <input className="mb-4 w-full border-none bg-transparent text-sm text-(--muted) outline-none" value={resume.headerContact} onChange={(e) => save({ ...resume, headerContact: e.target.value })} />
               {resume.sections.map((section, idx) => (
-                <div
-                  key={section.id}
-                  className="mb-4 rounded-xl border border-transparent hover:border-(--line)"
-                  draggable
-                  onDragStart={() => setDragId(section.id)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => {
-                    if (!dragId || dragId === section.id) return;
-                    const from = resume.sections.findIndex((s) => s.id === dragId);
-                    const next = [...resume.sections];
-                    const [moved] = next.splice(from, 1);
-                    next.splice(idx, 0, moved);
-                    save({ ...resume, sections: next });
-                    setDragId(null);
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    <GripVertical size={14} className="text-(--muted)" />
-                    <input className="w-full border-none bg-transparent font-semibold uppercase tracking-wide outline-none" value={section.heading} onChange={(e) => save({ ...resume, sections: resume.sections.map((s) => (s.id === section.id ? { ...s, heading: e.target.value } : s)) })} />
-                    <button className="btn btn-ghost px-2" onClick={() => save({ ...resume, sections: resume.sections.filter((s) => s.id !== section.id) })}><Trash2 size={14} /></button>
+                <div key={section.id} className="mb-4 rounded-xl border border-(--line)/70 p-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-ghost px-2"
+                      aria-label="Move section up"
+                      disabled={idx === 0}
+                      onClick={() => {
+                        if (idx === 0) return;
+                        const sections = [...resume.sections];
+                        const [moved] = sections.splice(idx, 1);
+                        sections.splice(idx - 1, 0, moved);
+                        save({ ...resume, sections });
+                      }}
+                    >
+                      <ChevronUp size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost px-2"
+                      aria-label="Move section down"
+                      disabled={idx === resume.sections.length - 1}
+                      onClick={() => {
+                        if (idx === resume.sections.length - 1) return;
+                        const sections = [...resume.sections];
+                        const [moved] = sections.splice(idx, 1);
+                        sections.splice(idx + 1, 0, moved);
+                        save({ ...resume, sections });
+                      }}
+                    >
+                      <ChevronDown size={16} />
+                    </button>
+                    <input className="field min-w-0 flex-1 font-semibold uppercase tracking-wide" value={section.heading} onChange={(e) => save({ ...resume, sections: resume.sections.map((s) => (s.id === section.id ? { ...s, heading: e.target.value } : s)) })} />
+                    <button type="button" className="btn btn-ghost px-3" aria-label="Delete section" onClick={() => save({ ...resume, sections: resume.sections.filter((s) => s.id !== section.id) })}><Trash2 size={16} /></button>
                   </div>
                   {section.items.map((item) => (
                     <div key={item.id} className="mt-2">
@@ -193,18 +239,21 @@ export default function ResumePage() {
                         <input className="field" placeholder="Dates" value={item.dates} onChange={(e) => updateItem(resume, save, section.id, item.id, { dates: e.target.value })} />
                       </div>
                       {item.bullets.map((b) => (
-                        <div key={b.id} className="mt-2 flex gap-2">
-                          <span className="pt-3 text-(--muted)">{resume.bulletStyle === "dash" ? "–" : resume.bulletStyle === "none" ? "" : "•"}</span>
-                          <textarea className="field min-h-16 flex-1" value={b.text} onChange={(e) => updateBullet(resume, save, section.id, item.id, b.id, e.target.value)} />
+                        <div key={b.id} className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-start">
+                          <div className="flex min-w-0 flex-1 gap-2">
+                            <span className="pt-3 text-(--muted)">{resume.bulletStyle === "dash" ? "–" : resume.bulletStyle === "none" ? "" : "•"}</span>
+                            <textarea className="field min-h-16 flex-1" value={b.text} onChange={(e) => updateBullet(resume, save, section.id, item.id, b.id, e.target.value)} />
+                          </div>
                           <button
-                            className="btn btn-ghost h-10"
+                            type="button"
+                            className="btn btn-ghost w-full sm:w-auto"
                             onClick={() => setImprove({ sectionId: section.id, itemId: item.id, bulletId: b.id, result: improveBullet(b.text, tone, length) })}
                           >
                             <Sparkles size={14} /> Improve
                           </button>
                         </div>
                       ))}
-                      <button className="btn btn-ghost mt-2" onClick={() => addBullet(resume, save, section.id, item.id)}><Plus size={14} /> Bullet</button>
+                      <button type="button" className="btn btn-ghost mt-2 w-full sm:w-auto" onClick={() => addBullet(resume, save, section.id, item.id)}><Plus size={14} /> Bullet</button>
                     </div>
                   ))}
                 </div>
@@ -222,9 +271,15 @@ export default function ResumePage() {
             </div>
             {score ? (
               <div className="card p-4">
-                <div className="text-sm text-(--muted)">Resume Strength</div>
-                <div className="serif text-4xl">{score.overall}/100</div>
-                <div className="mt-3 grid gap-2">
+                <div className="flex items-center gap-4">
+                  <Ring value={score.overall} size={96} />
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-(--muted)">Resume rating</div>
+                    <div className="serif text-2xl text-(--ink)">{score.rating}</div>
+                    <div className="text-sm font-semibold text-(--accent)">{score.overall}/100</div>
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-2">
                   <ScoreBar label="Formatting" value={score.formatting} />
                   <ScoreBar label="Readability" value={score.readability} />
                   <ScoreBar label="Action verbs" value={score.actionVerbs} />
@@ -234,10 +289,44 @@ export default function ResumePage() {
                   <ScoreBar label="Impact" value={score.impact} />
                   <ScoreBar label="Relevant experience" value={score.relevantExperience} />
                 </div>
-                <ul className="mt-3 list-disc pl-5 text-sm text-(--muted)">
-                  {score.recommendations.map((r) => <li key={r}>{r}</li>)}
-                  {score.strengths.map((r) => <li key={r}>{r}</li>)}
-                </ul>
+                {score.improvements.length ? (
+                  <div className="mt-4 border-t border-(--line) pt-3">
+                    <div className="text-sm font-semibold text-(--ink)">Where to improve</div>
+                    <ul className="mt-2 space-y-2">
+                      {score.improvements.map((item) => (
+                        <li key={item.area} className="rounded-[var(--radius-sm)] border border-(--line) bg-(--bg)/50 px-3 py-2 text-sm">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold">{item.area}</span>
+                            <span
+                              className={`text-[10px] font-bold uppercase tracking-wide ${
+                                item.priority === "high"
+                                  ? "text-(--danger)"
+                                  : item.priority === "medium"
+                                    ? "text-(--accent-2)"
+                                    : "text-(--muted)"
+                              }`}
+                            >
+                              {item.priority}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-(--muted)">{item.tip}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="mt-4 text-sm text-(--accent)">No major gaps — polish bullets with Improve if you want.</p>
+                )}
+                {score.strengths.length ? (
+                  <div className="mt-3">
+                    <div className="text-sm font-semibold">Strengths</div>
+                    <ul className="mt-1 list-disc pl-5 text-sm text-(--muted)">
+                      {score.strengths.map((r) => (
+                        <li key={r}>{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </aside>
@@ -245,8 +334,12 @@ export default function ResumePage() {
       )}
 
       {improve && resume ? (
-        <div className="fixed inset-0 z-40 grid place-items-center bg-black/30 p-4" onClick={() => setImprove(null)}>
-          <div className="card max-h-[90vh] max-w-xl overflow-auto p-5" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center"
+          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+          onClick={() => setImprove(null)}
+        >
+          <div className="card max-h-[min(85dvh,40rem)] w-full max-w-xl overflow-auto p-5" onClick={(e) => e.stopPropagation()}>
             <h3 className="serif text-3xl">Improve bullet</h3>
             <div className="mt-3 text-sm">
               <div className="font-semibold">Original</div>
@@ -266,12 +359,12 @@ export default function ResumePage() {
               )}
               <p className="mt-3 text-xs text-(--muted)">{improve.result.explanation}</p>
             </div>
-            <div className="mt-4 flex gap-2">
-              <button className="btn btn-primary" onClick={() => { updateBullet(resume, save, improve.sectionId, improve.itemId, improve.bulletId, improve.result.impact); setImprove(null); }}>Use impact version</button>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <button type="button" className="btn btn-primary w-full sm:w-auto" onClick={() => { updateBullet(resume, save, improve.sectionId, improve.itemId, improve.bulletId, improve.result.impact); setImprove(null); }}>Use impact version</button>
               {improve.result.quantified ? (
-                <button className="btn btn-ghost" onClick={() => { updateBullet(resume, save, improve.sectionId, improve.itemId, improve.bulletId, improve.result.quantified!); setImprove(null); }}>Use quantified</button>
+                <button type="button" className="btn btn-ghost w-full sm:w-auto" onClick={() => { updateBullet(resume, save, improve.sectionId, improve.itemId, improve.bulletId, improve.result.quantified!); setImprove(null); }}>Use quantified</button>
               ) : null}
-              <button className="btn btn-ghost" onClick={() => setImprove(null)}>Keep original</button>
+              <button type="button" className="btn btn-ghost w-full sm:w-auto" onClick={() => setImprove(null)}>Keep original</button>
             </div>
           </div>
         </div>

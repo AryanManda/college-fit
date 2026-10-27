@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
-import { COLLEGES, getCollege, logoUrl } from "../../../data/colleges";
+import { useEffect, useState } from "react";
+import { COLLEGES, getCollege, logoUrl, rememberCollege } from "../../../data/colleges";
 import { matchCollege } from "../../../lib/matching";
 import { ADMISSIONS_FACTOR_KEYS, MATCH_DISCLAIMER } from "../../../lib/constants";
 import { useStore } from "../../../lib/store";
@@ -11,12 +11,42 @@ import { money, pct, scoreTone } from "../../../lib/format";
 import { PageHeader, ScoreBar } from "../../../components/ui";
 import { answerSchoolQuestion, applicationStrategy, similarMoreAchievable } from "../../../lib/discovery";
 import { TRAVEL_NOTE } from "../../../lib/geo";
+import type { College } from "../../../lib/types";
 
 export default function CollegeProfileClient() {
   const { id } = useParams<{ id: string }>();
-  const college = getCollege(id);
   const { state, setState } = useStore();
   const [toast, setToast] = useState<string | null>(null);
+  const [college, setCollege] = useState<College | null>(() => getCollege(id) ?? null);
+  const [loading, setLoading] = useState(!getCollege(id));
+
+  useEffect(() => {
+    const local = getCollege(id);
+    if (local) {
+      setCollege(local);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    fetch(`/api/colleges/${encodeURIComponent(id)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data?.school) return;
+        rememberCollege(data.school);
+        setCollege(data.school);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  if (loading) {
+    return <div className="text-(--muted)">Loading school…</div>;
+  }
 
   if (!college) {
     return (
@@ -39,17 +69,17 @@ export default function CollegeProfileClient() {
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-start gap-4">
+      <div className="mb-5 flex min-w-0 flex-wrap items-start gap-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={logoUrl(college)} alt="" className="h-14 w-14 rounded-2xl border border-(--line) bg-white" />
-        <div className="flex-1">
+        <img src={logoUrl(college)} alt="" className="h-14 w-14 shrink-0 rounded-2xl border border-(--line) bg-white" />
+        <div className="min-w-0 flex-1">
           <PageHeader
             eyebrow="College profile"
             title={college.name}
             subtitle={`${college.city}, ${college.state} · ${college.type} · ${college.campusSetting} · Data last updated: ${college.dataUpdated}`}
           />
         </div>
-        <div className={`text-4xl font-semibold ${scoreTone(match.overall)}`}>{match.overall}/100</div>
+        <div className={`shrink-0 text-3xl font-semibold sm:text-4xl ${scoreTone(match.overall)}`}>{match.overall}/100</div>
       </div>
       {toast ? <div className="mb-4 text-sm font-semibold text-(--accent)">{toast}</div> : null}
       <div className="mb-6 flex flex-wrap gap-2">

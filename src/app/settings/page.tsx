@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { APP_NAME } from "../../lib/constants";
 import { COLLEGES } from "../../data/colleges";
+import { logoutAccount } from "../../lib/auth-local";
 import { useStore } from "../../lib/store";
 import { PageHeader } from "../../components/ui";
 
 export default function SettingsPage() {
   const { state, reset, loadDemo } = useStore();
+  const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
 
   const onLoadDemo = () => {
@@ -20,6 +23,13 @@ export default function SettingsPage() {
     if (!window.confirm("Reset your profile? This clears saved schools, careers, and progress in this browser.")) return;
     reset();
     setMessage("Profile reset. Create a new profile to continue.");
+  };
+
+  const onLogout = () => {
+    logoutAccount();
+    reset();
+    setMessage("Signed out. Local guest profile cleared.");
+    router.push("/account");
   };
 
   return (
@@ -42,6 +52,11 @@ export default function SettingsPage() {
             {!state.student.firstName ? (
               <Link href="/onboarding" className="btn btn-ghost">Create your profile</Link>
             ) : null}
+            {(state.accountEmail || state.student.firstName) ? (
+              <button type="button" className="btn btn-ghost text-(--danger)" onClick={onLogout}>
+                Log out
+              </button>
+            ) : null}
           </div>
         </section>
         <section className="card p-5">
@@ -60,14 +75,14 @@ export default function SettingsPage() {
           <div className="mt-3 flex flex-wrap gap-2">
             <Link href="/resume" className="btn btn-ghost">Resume Builder</Link>
             <Link href="/admitted" className="btn btn-ghost">How to Get Admitted</Link>
-            <Link href="/strength" className="btn btn-ghost">Application strength</Link>
+            <Link href="/strength" className="btn btn-ghost">Overall strength</Link>
             <Link href="/profile" className="btn btn-ghost">Edit profile</Link>
           </div>
         </section>
         <section className="card p-5">
           <h2 className="font-semibold">Data</h2>
           <p className="mt-1 text-sm text-(--muted)">
-            College catalog: {COLLEGES.length} universities. Important figures include a source list and “Data last updated: 2024–25”. Always verify deadlines, costs, and testing rules with the university.
+            College catalog: {COLLEGES.length} curated schools with rich match data, plus national College Scorecard search for any U.S. college. Public high schools come from NCES CCD. Always verify deadlines, costs, and testing rules with the university.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" className="btn btn-ghost" onClick={onLoadDemo}>Load demo student</button>
