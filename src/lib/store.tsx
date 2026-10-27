@@ -3,7 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { AppState } from "./types";
 import { demoState, emptyState } from "./defaults";
-import { getSessionEmail, saveAccountProfile } from "./auth-local";
+import { getSessionEmail, loadSecureProfile, saveAccountProfile } from "./auth-local";
+import { FERPA_MODE } from "./ferpa";
 
 const KEY = "aether.collegefit.v4";
 const OLD_KEYS = ["aether.collegefit.v3", "aether.collegefit.v2", "aether.collegefit.v1"];
@@ -69,6 +70,20 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    if (FERPA_MODE) {
+      // Never leave a readable profile behind in localStorage; guests keep theirs in this tab only.
+      for (const k of [KEY, ...OLD_KEYS, LEGACY_BACKUP_KEY, LEGACY_ACCESS_KEY]) localStorage.removeItem(k);
+      loadSecureProfile()
+        .then((profile) => {
+          const raw = profile ? null : sessionStorage.getItem(KEY);
+          setStateRaw(mergeState(profile ?? (raw ? (JSON.parse(raw) as Partial<AppState>) : null)));
+        })
+        .catch(() => {
+          /* ignore */
+        })
+        .finally(() => setHydrated(true));
+      return;
+    }
     try {
       let raw = localStorage.getItem(LEGACY_BACKUP_KEY);
       for (const k of raw ? [] : [KEY, ...OLD_KEYS]) {
@@ -89,6 +104,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return;
+    if (FERPA_MODE) {
+      if (state.accountEmail) {
+        sessionStorage.removeItem(KEY);
+        saveAccountProfile(state.accountEmail, state);
+      } else {
+        sessionStorage.setItem(KEY, JSON.stringify(state));
+      }
+      return;
+    }
     localStorage.setItem(KEY, JSON.stringify(state));
     if (state.accountEmail) {
       try {

@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { APP_NAME } from "../../lib/constants";
 import { COLLEGES } from "../../data/colleges";
-import { logoutAccount } from "../../lib/auth-local";
+import { deleteAccount, logoutAccount } from "../../lib/auth-local";
+import { FERPA_MODE } from "../../lib/ferpa";
 import { useStore } from "../../lib/store";
 import { PageHeader } from "../../components/ui";
 
@@ -23,6 +24,24 @@ export default function SettingsPage() {
     if (!window.confirm("Reset your profile? This clears saved schools, careers, and progress in this browser.")) return;
     reset();
     setMessage("Profile reset. Create a new profile to continue.");
+  };
+
+  const onDownload = () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${APP_NAME.toLowerCase()}-records-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const onDeleteRecords = () => {
+    const what = state.accountEmail ? `the account ${state.accountEmail} and its profile` : "this tab's profile";
+    if (!window.confirm(`Delete ${what} from this device? This can't be undone.`)) return;
+    if (state.accountEmail) deleteAccount(state.accountEmail);
+    reset();
+    setMessage("Your records were deleted from this device.");
   };
 
   const onLogout = () => {
@@ -59,6 +78,24 @@ export default function SettingsPage() {
             ) : null}
           </div>
         </section>
+        {FERPA_MODE ? (
+          <section className="card p-5">
+            <h2 className="font-semibold">Your records</h2>
+            <p className="mt-1 text-sm text-(--muted)">
+              Everything {APP_NAME} knows about you is on this device. Download a full copy to review it, fix anything
+              in your profile, or delete it here.{" "}
+              <Link href="/privacy" className="font-semibold text-(--accent) hover:underline">
+                How your records are protected
+              </Link>
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" className="btn btn-ghost" onClick={onDownload}>Download my records</button>
+              <button type="button" className="btn btn-ghost text-(--danger)" onClick={onDeleteRecords}>
+                Delete my records from this device
+              </button>
+            </div>
+          </section>
+        ) : null}
         <section className="card p-5">
           <h2 className="font-semibold">Career &amp; Assessment Settings</h2>
           <p className="mt-1 text-sm text-(--muted)">

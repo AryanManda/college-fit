@@ -3,6 +3,7 @@ import { COLLEGES_PUBLIC as B } from "./colleges-part2";
 import { DATA_YEAR, DEFAULT_SOURCES, PUBLIC_FLAGSHIP_CDS_FACTORS, SELECTIVE_CDS_FACTORS } from "../lib/constants";
 import { coordsFor, inferKind } from "../lib/geo";
 import type { College, FactorImportance } from "../lib/types";
+import { FERPA_MODE } from "../lib/ferpa";
 
 const CDS_BY_ID: Record<string, Record<string, FactorImportance>> = {
   harvard: SELECTIVE_CDS_FACTORS,
@@ -218,5 +219,6 @@ export function getCollege(id: string) {
 }
 
 export function logoUrl(college: College) {
+  if (FERPA_MODE) return `/api/logo?domain=${encodeURIComponent(college.domain)}`;
   return `https://www.google.com/s2/favicons?domain=${college.domain}&sz=128`;
 }

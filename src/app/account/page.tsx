@@ -1,16 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "../../components/ui";
 import { useStore } from "../../lib/store";
 import { loginAccount, logoutAccount, registerAccount } from "../../lib/auth-local";
 import { mergeStateSafe } from "../../lib/merge-state";
+import { FERPA_MODE } from "../../lib/ferpa";
 
 export default function AccountPage() {
+  return (
+    <Suspense>
+      <AccountContent />
+    </Suspense>
+  );
+}
+
+function AccountContent() {
   const { state, setState, reset } = useStore();
   const router = useRouter();
+  const expired = useSearchParams().get("expired") === "1";
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState(state.student.email || "");
   const [password, setPassword] = useState("");
@@ -65,8 +75,16 @@ export default function AccountPage() {
       <PageHeader
         eyebrow="Account"
         title={signedIn ? "Your account" : "Sign in"}
-        subtitle="Create an account to keep your profile, uploads, and progress across sessions on this device. Google/Apple SSO can be connected when provider keys are configured."
+        subtitle={
+          FERPA_MODE
+            ? "Create an account to keep your profile on this device, encrypted with your password. You're signed out after 30 minutes without activity or when you close the tab."
+            : "Create an account to keep your profile, uploads, and progress across sessions on this device. Google/Apple SSO can be connected when provider keys are configured."
+        }
       />
+
+      {FERPA_MODE && expired && !signedIn ? (
+        <p className="mb-4 text-sm text-(--ink)">You were signed out after 30 minutes without activity. Log in to continue.</p>
+      ) : null}
 
       {signedIn ? (
         <div className="card space-y-3 p-5">
@@ -110,9 +128,16 @@ export default function AccountPage() {
               {busy ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
             </button>
           </form>
-          <p className="mt-4 text-xs text-(--muted)">
-            OAuth (Google / Apple) requires provider API keys in production. Email/password accounts store an encrypted password hash and your profile locally for continuous sessions on this browser.
-          </p>
+          {FERPA_MODE ? (
+            <p className="mt-4 text-xs text-(--muted)">
+              Your profile is encrypted with your password and never leaves this device. If you forget the password, the
+              profile can&apos;t be recovered. <Link href="/privacy" className="font-semibold hover:underline">How your records are protected</Link>
+            </p>
+          ) : (
+            <p className="mt-4 text-xs text-(--muted)">
+              OAuth (Google / Apple) requires provider API keys in production. Email/password accounts store an encrypted password hash and your profile locally for continuous sessions on this browser.
+            </p>
+          )}
         </div>
       )}
 

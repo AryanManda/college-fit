@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# copied from pdfjs-dist by scripts/copy-pdf-worker.mjs
+/public/pdf.worker.min.mjs

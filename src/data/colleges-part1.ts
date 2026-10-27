@@ -10,6 +10,7 @@ import type {
   TestPolicy,
 } from "../lib/types";
 import { DATA_YEAR, DEFAULT_SOURCES } from "../lib/constants";
+import { FERPA_MODE } from "../lib/ferpa";
 
 type Seed = {
   id: string;
@@ -234,5 +235,6 @@ export function getCollege(id: string) {
 }
 
 export function logoUrl(college: College) {
+  if (FERPA_MODE) return `/api/logo?domain=${encodeURIComponent(college.domain)}`;
   return `https://www.google.com/s2/favicons?domain=${college.domain}&sz=128`;
 }

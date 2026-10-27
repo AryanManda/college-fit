@@ -19,7 +19,9 @@ import {
 import { APP_NAME, APP_TAGLINE } from "../lib/constants";
 import { logoutAccount } from "../lib/auth-local";
 import { studentName } from "../lib/defaults";
+import { FERPA_MODE } from "../lib/ferpa";
 import { useStore } from "../lib/store";
+import { IdleSignOut } from "./IdleSignOut";
 import { PageBackButton } from "./PageBackButton";
 
 const ITEMS = [
@@ -188,6 +190,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           )}
         </div>
+        {FERPA_MODE ? (
+          <Link href="/privacy" className="mt-3 px-2 text-xs font-semibold text-(--muted) hover:text-(--ink)">
+            Privacy &amp; student records
+          </Link>
+        ) : null}
       </aside>
 
       <div className="min-w-0 pb-[calc(5.25rem+env(safe-area-inset-bottom))] md:pb-0">
@@ -223,6 +230,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
         <main className="page-enter page-pad mx-auto w-full max-w-6xl py-6 md:py-8">
           {pathname !== "/home" ? <PageBackButton /> : null}
+          {FERPA_MODE && !signedIn ? (
+            <div className="mb-4 rounded-2xl border border-(--line) bg-(--accent-soft) px-4 py-3 text-sm text-(--ink)">
+              You&apos;re not signed in, so your work is kept only until you close this tab.{" "}
+              <Link href="/account" className="font-semibold text-(--accent) hover:underline">
+                Create an account
+              </Link>{" "}
+              to save it, encrypted, on this device.{" "}
+              <Link href="/privacy" className="font-semibold text-(--muted) hover:underline">
+                Privacy
+              </Link>
+            </div>
+          ) : null}
+          {FERPA_MODE ? <IdleSignOut /> : null}
           {children}
         </main>
       </div>

@@ -34,7 +34,7 @@ export function LocationAndDistance({
   const lookupZip = async () => {
     if (!/^\d{5}$/.test(s.zip)) return;
     try {
-      const res = await fetch(`https://api.zippopotam.us/us/${s.zip}`);
+      const res = await fetch(`/api/zip/${s.zip}`);
       if (!res.ok) return;
       const data = await res.json();
       const place = data.places?.[0];

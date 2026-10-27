@@ -29,8 +29,8 @@ function isPlainText(file: File) {
 
 async function extractPdf(file: File): Promise<ExtractResult> {
   const pdfjs = await import("pdfjs-dist");
-  // Use CDN worker matching installed pdf.js version (reliable on Vercel/Turbopack)
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+  // Served from public/, copied from the installed pdfjs-dist by scripts/copy-pdf-worker.mjs
+  pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
   const data = new Uint8Array(await file.arrayBuffer());
   const doc = await pdfjs.getDocument({ data }).promise;
